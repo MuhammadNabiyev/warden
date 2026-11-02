@@ -1,7 +1,7 @@
 {
-  "name": "rovo-agent-rovo",
-  "version": "1.2.3",
-  "description": "a sample forge app with rovo-agent module",
+  "name": "warden-agent",
+  "version": "0.1.0",
+  "description": "Warden: guardrails for Rovo agents in Jira (Codegeist 2026)",
   "main": "index.js",
   "private": true,
   "license": "MIT",
@@ -12,5 +12,12 @@
     "@forge/react": "^12.4.0",
     "@forge/resolver": "^2.0.2",
     "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "fast-check": "^4.10.2",
+    "vitest": "^5.1.0"
+  },
+  "scripts": {
+    "test": "vitest run"
   }
 }
