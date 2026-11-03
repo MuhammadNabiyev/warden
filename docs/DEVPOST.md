@@ -47,7 +47,7 @@ An admin writes the **mandate** on the Warden page in Jira: which projects and a
 - **Teamwork Graph:** the `jiraWorkItemGoals` query (`read:graph:issue:jira`, `read:graph:goal:atlassian`), called as the user.
 - **Forge KVS** for the mandate, approvals and the ledger.
 - **The policy engine** (`src/policy/evaluate.js`) is a pure function: no I/O, no model. Facts come from Jira, never from what the agent claims about an issue. Every hard rule that is broken is reported, and deny always wins over hold.
-- **Testing:** 16 Vitest unit and property-based tests (fast-check) on the engine, and a 12-test **TestSprite** suite run against a local HTTP harness that serves the exact engine code. TestSprite found two real bugs, both fixed.
+- **Testing:** 20 Vitest unit and property-based tests (fast-check) on the engine, the export and the approval race, and a 12-test **TestSprite** suite run against a local HTTP harness that serves the exact engine code. TestSprite found two real bugs, both fixed.
 - **Design:** the Warden page was reviewed by OpenAI Codex as a second designer; its ranked findings (decision-receipt cards, request-verdict-outcome activity, honest empty states, stuck-button and stale-approval bugs) were applied.
 
 ## Challenges we ran into

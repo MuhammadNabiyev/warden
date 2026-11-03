@@ -279,7 +279,7 @@ const asList = (v) => (Array.isArray(v) ? v.join(", ") : v);
 
 function MandateEditor({ mandate, usage, onSaved, onStatus }) {
   const [draft, setDraft] = useState({ ...mandate, projects: asList(mandate.projects), blockedLabels: asList(mandate.blockedLabels), holdLabels: asList(mandate.holdLabels), protectedTypes: asList(mandate.protectedTypes), holdPriorities: asList(mandate.holdPriorities), holdStatuses: asList(mandate.holdStatuses || []), protectedGoals: asList(mandate.protectedGoals || []) });
-  const [graphKey, setGraphKey] = useState("PAY-1");
+  const [graphKey, setGraphKey] = useState(`${mandate.projects[0] || "PAY"}-1`);
   const [graphResult, setGraphResult] = useState(null);
   const checkGraph = async () => {
     try {
@@ -442,8 +442,8 @@ function MandateEditor({ mandate, usage, onSaved, onStatus }) {
 
 // ---------- Simulator ----------
 
-function Simulator() {
-  const [jql, setJql] = useState("project = PAY ORDER BY updated DESC");
+function Simulator({ project }) {
+  const [jql, setJql] = useState(`project = ${project || "PAY"} ORDER BY updated DESC`);
   const [toStatus, setToStatus] = useState("Done");
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -646,7 +646,7 @@ function App() {
         </TabPanel>
         <TabPanel>
           <Box xcss={xcss({ paddingTop: "space.200", width: "100%" })}>
-            <Simulator />
+            <Simulator key={state.mandate.projects[0] || "none"} project={state.mandate.projects[0]} />
           </Box>
         </TabPanel>
       </Tabs>

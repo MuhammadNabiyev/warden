@@ -65,7 +65,7 @@ Rovo chat / MCP client
 ```bash
 cd app/warden-agent
 npm install
-npm test                      # 16 Vitest unit and property tests (fast-check)
+npm test                      # 20 Vitest unit and property tests (fast-check)
 forge deploy -e development
 forge install --site <your-site>.atlassian.net --product jira -e development
 ```
