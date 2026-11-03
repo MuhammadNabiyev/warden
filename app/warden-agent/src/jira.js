@@ -27,6 +27,7 @@ export async function issueFacts(issueKey) {
   const f = data.fields;
   return {
     issueKey: data.key,
+    issueId: data.id,
     summary: f.summary,
     projectKey: f.project?.key,
     issueType: f.issuetype?.name,

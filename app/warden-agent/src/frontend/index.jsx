@@ -171,7 +171,10 @@ const KIND_OPTIONS = [
 const asList = (v) => (Array.isArray(v) ? v.join(", ") : v);
 
 function MandateEditor({ mandate, usage, onSaved, onStatus }) {
-  const [draft, setDraft] = useState({ ...mandate, projects: asList(mandate.projects), blockedLabels: asList(mandate.blockedLabels), holdLabels: asList(mandate.holdLabels), protectedTypes: asList(mandate.protectedTypes), holdPriorities: asList(mandate.holdPriorities), holdStatuses: asList(mandate.holdStatuses || []) });
+  const [draft, setDraft] = useState({ ...mandate, projects: asList(mandate.projects), blockedLabels: asList(mandate.blockedLabels), holdLabels: asList(mandate.holdLabels), protectedTypes: asList(mandate.protectedTypes), holdPriorities: asList(mandate.holdPriorities), holdStatuses: asList(mandate.holdStatuses || []), protectedGoals: asList(mandate.protectedGoals || []) });
+  const [graphKey, setGraphKey] = useState("PAY-1");
+  const [graphResult, setGraphResult] = useState(null);
+  const checkGraph = async () => setGraphResult(await invoke("checkGraph", { issueKey: graphKey }));
   const [message, setMessage] = useState(null);
   const set = (field) => (e) => setDraft({ ...draft, [field]: e.target.value });
   const setLimit = (field) => (e) => setDraft({ ...draft, limits: { ...draft.limits, [field]: e.target.value } });
@@ -265,6 +268,20 @@ function MandateEditor({ mandate, usage, onSaved, onStatus }) {
             <Textfield id="holdAboveRun" type="number" value={String(draft.holdAboveRun)} onChange={set("holdAboveRun")} />
           </Box>
         </Inline>
+        <Heading size="small">Connected context (Teamwork Graph)</Heading>
+        <Box>
+          <Label labelFor="protectedGoals">Protected goals</Label>
+          <Textfield id="protectedGoals" value={draft.protectedGoals} onChange={set("protectedGoals")} placeholder="Q4 checkout launch" />
+          <HelperMessage>Goal names from Atlassian Goals. An agent change to any issue linked to one of these goals waits for a person. If the graph cannot be reached, the change waits too.</HelperMessage>
+        </Box>
+        <Inline space="space.150" alignBlock="end">
+          <Box>
+            <Label labelFor="graphKey">Check an issue</Label>
+            <Textfield id="graphKey" value={graphKey} onChange={(e) => setGraphKey(e.target.value)} />
+          </Box>
+          <Button onClick={checkGraph}>Show linked goals</Button>
+        </Inline>
+        {graphResult && <SectionMessage appearance={graphResult.ok ? "information" : "warning"}>{graphResult.message}</SectionMessage>}
         <Heading size="small">Limits</Heading>
         <Inline space="space.200">
           <Box>

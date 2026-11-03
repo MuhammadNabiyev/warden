@@ -12,6 +12,7 @@ import { evaluatePlan } from "./policy/evaluate.js";
 import { sanitizeMandate } from "./policy/defaults.js";
 import { listApprovals, listLedger, recentUsage, saveMandate } from "./store.js";
 import { seedDemo } from "./demo.js";
+import { linkedGoals } from "./graph.js";
 
 /** Rovo passes the inputs in `payload`; the calling user's id sits in the context. */
 const accountOf = (payload, context) => context?.accountId || payload?.context?.accountId || context?.principal?.accountId || null;
@@ -25,25 +26,25 @@ const missing = (name) => `Warden needs “${name}” to do this. Ask the user f
 
 export async function transitionIssue(payload, context) {
   if (!payload.issueKey || !payload.toStatus) return missing(!payload.issueKey ? "issueKey" : "toStatus");
-  const entry = await guardedWrite({ kind: "transition", issueKey: payload.issueKey, args: { toStatus: payload.toStatus }, accountId: accountOf(payload, context), source: sourceOf(context) });
+  const entry = await guardedWrite({ kind: "transition", issueKey: payload.issueKey, args: { toStatus: payload.toStatus }, accountId: accountOf(payload, context), source: sourceOf(context), cloudId: context?.cloudId });
   return receiptText(entry);
 }
 
 export async function setPriority(payload, context) {
   if (!payload.issueKey || !payload.priority) return missing(!payload.issueKey ? "issueKey" : "priority");
-  const entry = await guardedWrite({ kind: "set_priority", issueKey: payload.issueKey, args: { priority: payload.priority }, accountId: accountOf(payload, context), source: sourceOf(context) });
+  const entry = await guardedWrite({ kind: "set_priority", issueKey: payload.issueKey, args: { priority: payload.priority }, accountId: accountOf(payload, context), source: sourceOf(context), cloudId: context?.cloudId });
   return receiptText(entry);
 }
 
 export async function assignIssue(payload, context) {
   if (!payload.issueKey || !payload.assignee) return missing(!payload.issueKey ? "issueKey" : "assignee");
-  const entry = await guardedWrite({ kind: "assign", issueKey: payload.issueKey, args: { assignee: payload.assignee }, accountId: accountOf(payload, context), source: sourceOf(context) });
+  const entry = await guardedWrite({ kind: "assign", issueKey: payload.issueKey, args: { assignee: payload.assignee }, accountId: accountOf(payload, context), source: sourceOf(context), cloudId: context?.cloudId });
   return receiptText(entry);
 }
 
 export async function commentIssue(payload, context) {
   if (!payload.issueKey || !payload.text) return missing(!payload.issueKey ? "issueKey" : "text");
-  const entry = await guardedWrite({ kind: "comment", issueKey: payload.issueKey, args: { text: payload.text }, accountId: accountOf(payload, context), source: sourceOf(context) });
+  const entry = await guardedWrite({ kind: "comment", issueKey: payload.issueKey, args: { text: payload.text }, accountId: accountOf(payload, context), source: sourceOf(context), cloudId: context?.cloudId });
   return receiptText(entry);
 }
 
@@ -140,6 +141,19 @@ resolver.define("simulate", async ({ payload, context }) => {
       deny: plan.filter((p) => p.verdict.decision === "deny").length,
     },
   };
+});
+
+/** Setup check for connected context: which goals does the Teamwork Graph link to this issue? */
+resolver.define("checkGraph", async ({ payload, context }) => {
+  try {
+    const facts = await jira.issueFacts(String(payload.issueKey || "").toUpperCase());
+    const graph = await linkedGoals(context.cloudId, facts.issueId);
+    return graph.ok
+      ? { ok: true, message: graph.goals.length ? `${facts.issueKey} is linked to: ${graph.goals.map((g) => g.name).join(", ")}.` : `Teamwork Graph answered: ${facts.issueKey} has no linked goals.` }
+      : { ok: false, message: `Teamwork Graph could not be checked: ${graph.error}` };
+  } catch (e) {
+    return { ok: false, message: e.message };
+  }
 });
 
 /** Loads demo issues into a project and adds that project to the mandate. */

@@ -8,6 +8,7 @@
 import { defaultMandate } from "./policy/defaults.js";
 import { evaluate } from "./policy/evaluate.js";
 import * as jira from "./jira.js";
+import { linkedGoals, protectedMatch } from "./graph.js";
 import { appendLedger, getApproval, getMandate, newId, recentUsage, saveApproval, saveMandate, updateLedger } from "./store.js";
 
 /** Loads the mandate, creating the conservative default on first use. */
@@ -59,7 +60,7 @@ export function describeChange(kind, before, args) {
  * @param {string} req.accountId  the person on whose behalf the agent acts
  * @param {"rovo"|"mcp"} req.source
  */
-export async function guardedWrite({ kind, issueKey, args, accountId, source }) {
+export async function guardedWrite({ kind, issueKey, args, accountId, source, cloudId }) {
   const now = new Date();
   const mandate = await loadMandate();
   const runId = runIdFor(accountId, now);
@@ -85,6 +86,20 @@ export async function guardedWrite({ kind, issueKey, args, accountId, source }) 
     assigneeOutsideProject = !(await jira.isAssignable(facts.projectKey, user.accountId));
   }
 
+  // Teamwork Graph: is this work linked to a goal the mandate protects?
+  let protectedGoal;
+  let contextUnavailable = false;
+  let goals = [];
+  if ((mandate.protectedGoals || []).length > 0) {
+    const graph = await linkedGoals(cloudId, facts.issueId);
+    if (graph.ok) {
+      goals = graph.goals;
+      protectedGoal = protectedMatch(graph.goals, mandate.protectedGoals)?.name;
+    } else {
+      contextUnavailable = true;
+    }
+  }
+
   const proposal = {
     kind,
     issueKey: facts.issueKey,
@@ -94,10 +109,12 @@ export async function guardedWrite({ kind, issueKey, args, accountId, source }) 
     priority: resolvedArgs.priority,
     toStatus: resolvedArgs.toStatus,
     assigneeOutsideProject,
+    protectedGoal,
+    contextUnavailable,
     runId,
   };
   const verdict = evaluate(mandate, proposal, await recentUsage(now), now);
-  const entry = { ...base, args: resolvedArgs, before: facts, verdict, change: describeChange(kind, facts, resolvedArgs) };
+  const entry = { ...base, args: resolvedArgs, before: facts, goals, verdict, change: describeChange(kind, facts, resolvedArgs) };
 
   if (verdict.decision === "deny") return appendLedger({ ...entry, status: "refused" });
 
