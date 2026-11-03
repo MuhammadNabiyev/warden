@@ -19,21 +19,27 @@
   },
   {
     "id": "cleared",
-    "scene": "Rovo chat: Move PAY-6 to In Progress, confirm, Cleared receipt",
+    "scene": "Rovo chat: Move PAY-8 to In Progress, confirm, Cleared receipt",
     "caption": "A safe change: Warden reads the facts from Jira, not from the agent. Cleared.",
-    "say": "Let's ask the Triage Steward agent to move PAY-6 to In Progress. Warden reads the facts from Jira itself, not from what the agent claims. Inside the mandate, so it is cleared, and done."
+    "say": "Let's ask the Triage Steward agent to move PAY-8 to In Progress. Warden reads the facts from Jira itself, not from what the agent claims. Inside the mandate, so it is cleared, and done."
   },
   {
     "id": "risky",
-    "scene": "Rovo chat: Move PAY-7 and PAY-5 to Done, Refused and Hold",
-    "caption": "Security work is refused. A customer escalation waits for a person.",
-    "say": "Now two riskier ones. PAY-7 carries the security label, so it is refused, and the agent is told not to retry. PAY-5 is a customer escalation, so it is held for a person. Nothing has been written."
+    "scene": "Rovo chat: Move PAY-7 and PAY-4 to Done, Refused and Hold",
+    "caption": "Security work is refused. Release-critical work waits for a person.",
+    "say": "Now two riskier ones. PAY-7 carries the security label, so it is refused, and the agent is told not to retry. PAY-4 is release-critical, so it is held for a person. Nothing has been written."
   },
   {
     "id": "insist",
     "scene": "Rovo chat: user insists, agent still refused",
     "caption": "Insisting does not help. Warden is the only path to a write.",
     "say": "What if the user insists, or an issue description tries to talk the agent into it? It does not matter. Warden is the only path to a write, and the rule is code."
+  },
+  {
+    "id": "graph",
+    "scene": "Rovo chat: Move PAY-2 to In Progress, Hold for protected goal",
+    "caption": "Teamwork Graph: PAY-2 is linked to a protected company goal, so it waits.",
+    "say": "Labels are not the whole story. PAY-2 looks harmless, but the Teamwork Graph shows it is linked to the company's revenue goal, which this mandate protects. So it waits for a person. If the graph cannot be reached, Warden holds instead of guessing."
   },
   {
     "id": "receipt",
@@ -46,12 +52,6 @@
     "scene": "Simulator: project = PAY, move to Done",
     "caption": "Simulate a bulk run before anything happens. Nothing is written.",
     "say": "Before a bulk run, simulate it. Every issue in the project, judged in a second, with the reason for each verdict. Limits are projected across the whole plan, so a big run is stopped up front, not halfway."
-  },
-  {
-    "id": "graph",
-    "scene": "Mandate: protected goals and Teamwork Graph check",
-    "caption": "Teamwork Graph: work linked to a protected goal waits for a person.",
-    "say": "Labels are not the whole story. Warden asks the Teamwork Graph which goals an issue is linked to. Work tied to a protected goal waits for a person, and if the graph cannot be reached, Warden holds instead of guessing."
   },
   {
     "id": "ledger",

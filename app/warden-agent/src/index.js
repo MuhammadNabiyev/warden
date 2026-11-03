@@ -19,7 +19,14 @@ import { ledgerCsv } from "./export.js";
 const accountOf = (payload, context) => context?.accountId || payload?.context?.accountId || context?.principal?.accountId || null;
 
 /** MCP clients and Rovo both land here; the source is recorded in the ledger. */
-const sourceOf = (context) => (context?.moduleKey && String(context.moduleKey).includes("mcp") ? "mcp" : "rovo");
+/**
+ * Rovo actions do not always carry `cloudId`; the install context (ari:cloud:jira::site/<cloudId>)
+ * always names the site, so fall back to it. Without a site Warden cannot ask the Teamwork Graph.
+ */
+const cloudOf = (payload, context) =>
+  context?.cloudId || payload?.context?.cloudId || payload?.cloudId || String(context?.installContext || payload?.context?.installContext || "").split("/").pop() || undefined;
+
+const sourceOf = (payload, context) => (String(context?.moduleKey || payload?.context?.moduleKey || "").includes("mcp") ? "mcp" : "rovo");
 
 const missing = (name) => `Warden needs “${name}” to do this. Ask the user for it.`;
 
@@ -27,25 +34,25 @@ const missing = (name) => `Warden needs “${name}” to do this. Ask the user f
 
 export async function transitionIssue(payload, context) {
   if (!payload.issueKey || !payload.toStatus) return missing(!payload.issueKey ? "issueKey" : "toStatus");
-  const entry = await guardedWrite({ kind: "transition", issueKey: payload.issueKey, args: { toStatus: payload.toStatus }, accountId: accountOf(payload, context), source: sourceOf(context), cloudId: context?.cloudId });
+  const entry = await guardedWrite({ kind: "transition", issueKey: payload.issueKey, args: { toStatus: payload.toStatus }, accountId: accountOf(payload, context), source: sourceOf(payload, context), cloudId: cloudOf(payload, context) });
   return receiptText(entry);
 }
 
 export async function setPriority(payload, context) {
   if (!payload.issueKey || !payload.priority) return missing(!payload.issueKey ? "issueKey" : "priority");
-  const entry = await guardedWrite({ kind: "set_priority", issueKey: payload.issueKey, args: { priority: payload.priority }, accountId: accountOf(payload, context), source: sourceOf(context), cloudId: context?.cloudId });
+  const entry = await guardedWrite({ kind: "set_priority", issueKey: payload.issueKey, args: { priority: payload.priority }, accountId: accountOf(payload, context), source: sourceOf(payload, context), cloudId: cloudOf(payload, context) });
   return receiptText(entry);
 }
 
 export async function assignIssue(payload, context) {
   if (!payload.issueKey || !payload.assignee) return missing(!payload.issueKey ? "issueKey" : "assignee");
-  const entry = await guardedWrite({ kind: "assign", issueKey: payload.issueKey, args: { assignee: payload.assignee }, accountId: accountOf(payload, context), source: sourceOf(context), cloudId: context?.cloudId });
+  const entry = await guardedWrite({ kind: "assign", issueKey: payload.issueKey, args: { assignee: payload.assignee }, accountId: accountOf(payload, context), source: sourceOf(payload, context), cloudId: cloudOf(payload, context) });
   return receiptText(entry);
 }
 
 export async function commentIssue(payload, context) {
   if (!payload.issueKey || !payload.text) return missing(!payload.issueKey ? "issueKey" : "text");
-  const entry = await guardedWrite({ kind: "comment", issueKey: payload.issueKey, args: { text: payload.text }, accountId: accountOf(payload, context), source: sourceOf(context), cloudId: context?.cloudId });
+  const entry = await guardedWrite({ kind: "comment", issueKey: payload.issueKey, args: { text: payload.text }, accountId: accountOf(payload, context), source: sourceOf(payload, context), cloudId: cloudOf(payload, context) });
   return receiptText(entry);
 }
 

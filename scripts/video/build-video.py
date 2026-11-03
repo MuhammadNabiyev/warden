@@ -2,7 +2,7 @@
 
     python scripts/video/build-video.py
 
-Inputs (in video-out/): raw.mp4 (screen recording), narration/<id>.mp3 + durations.json.
+Inputs (in video-out/): raw2.mp4 (screen recording with the real cursor), narration/<id>.mp3 + durations.json.
 Output: video-out/warden-demo.mp4 (1920x1080, H.264 + AAC, narration only, no music).
 """
 import json
@@ -30,21 +30,22 @@ LEAD, TAIL = 0.35, 0.65  # silence before and after each narration line
 FULL = "crop=1888:1062:14:12"
 PAGE = "crop=1424:801:474:74"  # the Warden page without the Jira sidebar and top bar
 RECEIPT = "crop=1424:801:474:210"  # lower, so the receipt's buttons stay in frame
-ROVO = "crop=1424:801:474:100"  # the Warden page and the Rovo panel side by side
+ROVO = "crop=1440:810:470:145"  # the Warden page and the Rovo panel, low enough to show the chat input
 
-# scene id -> (crop, [(source in, source out), ...]) in seconds of raw.mp4
+# scene id -> (crop, [(source in, source out), ...]) in seconds of raw2.mp4
 SCENES = {
-    "idea": (FULL, [(5.5, 15.0)]),
-    "mandate": (PAGE, [(20.0, 47.0)]),
-    "cleared": (ROVO, [(162.0, 166.5), (173.0, 175.5), (179.0, 181.5), (187.0, 196.0)]),
-    "risky": (ROVO, [(202.5, 206.0), (210.0, 212.5), (220.5, 223.5), (228.0, 234.0), (248.0, 251.0), (256.0, 263.0)]),
-    "insist": (ROVO, [(264.5, 282.0)]),
-    "receipt": (RECEIPT, [(297.0, 318.0)]),
-    "simulate": (PAGE, [(327.0, 353.0)]),
-    "graph": (PAGE, [(111.0, 128.0)]),
-    "ledger": (PAGE, [(367.0, 378.0), (381.0, 384.5)]),
+    "idea": (FULL, [(729.0, 743.0)]),
+    "mandate": (PAGE, [(15.5, 30.0), (62.0, 80.0)]),
+    "cleared": (ROVO, [(792.0, 802.0), (811.5, 813.5), (827.0, 830.5), (838.0, 845.0)]),
+    "risky": (ROVO, [(863.0, 870.5), (878.0, 880.0), (900.0, 905.0), (917.0, 926.0), (950.0, 956.0)]),
+    "insist": (ROVO, [(958.5, 970.0), (972.5, 984.0)]),
+    "graph": (ROVO, [(1000.5, 1012.0), (1017.5, 1019.5), (1031.0, 1034.0), (1041.5, 1051.0), (1077.0, 1081.0)]),
+    "receipt": (RECEIPT, [(1082.0, 1110.0)]),
+    "simulate": (PAGE, [(1131.0, 1134.5), (1146.0, 1160.0), (1187.0, 1194.0)]),
+    "ledger": (PAGE, [(1224.0, 1234.0), (1245.0, 1253.0)]),
 }
-ORDER = ["hook", "idea", "mandate", "cleared", "risky", "insist", "receipt", "simulate", "graph", "ledger", "close"]
+MAX_SPEED = 1.6  # faster than this and typing and cursor moves stop looking human
+ORDER = ["hook", "idea", "mandate", "cleared", "risky", "insist", "graph", "receipt", "simulate", "ledger", "close"]
 
 
 def run(args):
@@ -80,9 +81,9 @@ def audio_inputs(sid, length):
 
 
 def build_scene(sid):
-    length = DUR[sid] + LEAD + TAIL
     crop, parts = SCENES[sid]
     source = sum(b - a for a, b in parts)
+    length = max(DUR[sid] + LEAD + TAIL, source / MAX_SPEED)
     speed = source / length
     chains = [f"[0:v]trim={a}:{b},setpts=PTS-STARTPTS[p{i}]" for i, (a, b) in enumerate(parts)]
     joined = "".join(f"[p{i}]" for i in range(len(parts)))
@@ -90,11 +91,11 @@ def build_scene(sid):
     video = (
         f"{joined}concat=n={len(parts)}:v=1:a=0,{look}"
         f"setpts=PTS/{speed:.4f},fps=30,tpad=stop_mode=clone:stop_duration=5,trim=0:{length:.3f},"
-        f"{frame_filter(sid)},fade=t=in:st=0:d=0.25,format=yuv420p[v]"
+        f"{frame_filter(sid)},format=yuv420p[v]"
     )
     a_in, a_chain = audio_inputs(sid, length)
     out = WORK / f"{sid}.mp4"
-    run(["-i", str(OUT / "raw.mp4"), *a_in, "-filter_complex", ";".join([*chains, video, a_chain]),
+    run(["-i", str(OUT / "raw2.mp4"), *a_in, "-filter_complex", ";".join([*chains, video, a_chain]),
          "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "slow", "-crf", "18",
          "-c:a", "aac", "-b:a", "192k", "-r", "30", str(out)])
     print(f"{sid}: {source:.1f}s source -> {length:.1f}s ({speed:.2f}x)")
