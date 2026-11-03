@@ -4,3 +4,4 @@ node_modules
 /graft/
 .claude/
 testsprite_tests/tmp/
+video-out/

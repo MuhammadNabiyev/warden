@@ -1,0 +1,68 @@
+[
+  {
+    "id": "hook",
+    "scene": "Title card",
+    "caption": "Rovo agents can change Jira for you. That is the scary part.",
+    "say": "Rovo agents can now change Jira for you. That is also the scary part. One confident agent can close a customer escalation, or touch a security ticket, in seconds."
+  },
+  {
+    "id": "idea",
+    "scene": "Warden page, header",
+    "caption": "Warden: a policy firewall for Rovo agents. The model proposes. Plain code decides.",
+    "say": "Warden is a policy firewall for Rovo agents. The model proposes. Plain code decides. No language model is ever asked whether a change is allowed."
+  },
+  {
+    "id": "mandate",
+    "scene": "Mandate tab, scroll through rules and limits",
+    "caption": "The admin writes a mandate: scope, hard rules, sensitive rules, limits, expiry.",
+    "say": "An admin writes a mandate. Which projects and actions the agent may touch. Labels it must never touch. Labels that need a person first. And limits per run, per hour and per day, on rolling windows."
+  },
+  {
+    "id": "cleared",
+    "scene": "Rovo chat: Move PAY-6 to In Progress, confirm, Cleared receipt",
+    "caption": "A safe change: Warden reads the facts from Jira, not from the agent. Cleared.",
+    "say": "Let's ask the Triage Steward agent to move PAY-6 to In Progress. Warden reads the facts from Jira itself, not from what the agent claims. Inside the mandate, so it is cleared, and done."
+  },
+  {
+    "id": "risky",
+    "scene": "Rovo chat: Move PAY-7 and PAY-5 to Done, Refused and Hold",
+    "caption": "Security work is refused. A customer escalation waits for a person.",
+    "say": "Now two riskier ones. PAY-7 carries the security label, so it is refused, and the agent is told not to retry. PAY-5 is a customer escalation, so it is held for a person. Nothing has been written."
+  },
+  {
+    "id": "insist",
+    "scene": "Rovo chat: user insists, agent still refused",
+    "caption": "Insisting does not help. Warden is the only path to a write.",
+    "say": "What if the user insists, or an issue description tries to talk the agent into it? It does not matter. Warden is the only path to a write, and the rule is code."
+  },
+  {
+    "id": "receipt",
+    "scene": "Warden Approvals: PAY-5 receipt, Approve and apply",
+    "caption": "Held changes wait as a receipt. Approval re-checks the issue and the rules first.",
+    "say": "Held changes wait here as a receipt: the exact change, why it was held, and the mandate version. When I approve, Warden re-reads the issue and re-checks the current rules first. A refusal always beats an approval."
+  },
+  {
+    "id": "simulate",
+    "scene": "Simulator: project = PAY, move to Done",
+    "caption": "Simulate a bulk run before anything happens. Nothing is written.",
+    "say": "Before a bulk run, simulate it. Every issue in the project, judged in a second, with the reason for each verdict. Limits are projected across the whole plan, so a big run is stopped up front, not halfway."
+  },
+  {
+    "id": "graph",
+    "scene": "Mandate: protected goals and Teamwork Graph check",
+    "caption": "Teamwork Graph: work linked to a protected goal waits for a person.",
+    "say": "Labels are not the whole story. Warden asks the Teamwork Graph which goals an issue is linked to. Work tied to a protected goal waits for a person, and if the graph cannot be reached, Warden holds instead of guessing."
+  },
+  {
+    "id": "ledger",
+    "scene": "Activity table and CSV export",
+    "caption": "Every decision lands in the ledger, exportable for audit.",
+    "say": "Every decision lands in the ledger: the request, the verdict, the rule, and what happened next. One click exports it for your auditors."
+  },
+  {
+    "id": "close",
+    "scene": "Closing card: Rovo agent, MCP, Teamwork Graph, tests",
+    "caption": "Warden. Let agents work, without handing them the keys.",
+    "say": "The same guarded tools are exposed over MCP, so any agent gets the same guardrails. Warden. Let agents work, without handing them the keys."
+  }
+]
