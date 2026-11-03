@@ -41,6 +41,7 @@ export async function issueFacts(issueKey) {
 export async function searchIssues(jql, max = 20) {
   const data = await call(route`/rest/api/3/search/jql?jql=${jql}&maxResults=${max}&fields=summary,status,priority,labels,assignee,issuetype`);
   return (data.issues || []).map((i) => ({
+    id: i.id,
     key: i.key,
     summary: i.fields.summary,
     status: i.fields.status?.name,

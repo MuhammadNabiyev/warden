@@ -12,7 +12,7 @@ import { evaluatePlan } from "./policy/evaluate.js";
 import { sanitizeMandate } from "./policy/defaults.js";
 import { listApprovals, listLedger, recentUsage, saveMandate } from "./store.js";
 import { seedDemo } from "./demo.js";
-import { linkedGoals } from "./graph.js";
+import { linkedGoals, protectedMatch } from "./graph.js";
 import { ledgerCsv } from "./export.js";
 
 /** Rovo passes the inputs in `payload`; the calling user's id sits in the context. */
@@ -70,6 +70,7 @@ export async function explainMandate() {
     `Projects: ${m.projects.join(", ") || "none yet (an admin must add projects on the Warden page)"}.`,
     `Never touched: issues labelled ${m.blockedLabels.join(", ") || "-"}; ${m.protectedTypes.join(", ") || "no"} issue types.`,
     `Needs a person first: labels ${m.holdLabels.join(", ") || "-"}; priorities ${m.holdPriorities.join(", ") || "-"}; statuses ${(m.holdStatuses || []).join(", ") || "-"}; more than ${m.holdAboveRun} writes in one run.`,
+    `Protected goals (Teamwork Graph): ${(m.protectedGoals || []).join(", ") || "none"}; work linked to them needs a person first.`,
     `Limits: ${m.limits.perRun} per run, ${m.limits.perHour} per hour, ${m.limits.perDay} per day.`,
   ].join("\n");
 }
@@ -123,7 +124,11 @@ resolver.define("simulate", async ({ payload, context }) => {
   const mandate = await loadMandate();
   const issues = await jira.searchIssues(payload.jql || "order by updated DESC", Math.min(Number(payload.max) || 40, 50));
   const runId = `${runIdFor(context.accountId, now)}:simulation`;
-  const proposals = issues.map((i) => ({
+  // Same connected context as a real write: protected goals come from the Teamwork Graph.
+  const graph = (mandate.protectedGoals || []).length
+    ? await Promise.all(issues.map((i) => linkedGoals(context.cloudId, i.id)))
+    : issues.map(() => null);
+  const proposals = issues.map((i, n) => ({
     kind: payload.kind || "transition",
     issueKey: i.key,
     projectKey: i.key.split("-")[0],
@@ -131,6 +136,8 @@ resolver.define("simulate", async ({ payload, context }) => {
     labels: i.labels,
     priority: payload.priority,
     toStatus: payload.toStatus,
+    protectedGoal: graph[n]?.ok ? protectedMatch(graph[n].goals, mandate.protectedGoals)?.name : undefined,
+    contextUnavailable: graph[n] ? !graph[n].ok : false,
     runId,
   }));
   const plan = evaluatePlan(mandate, proposals, await recentUsage(now), now);

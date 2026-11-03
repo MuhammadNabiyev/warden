@@ -10,7 +10,6 @@ import ForgeReconciler, {
   Box,
   Button,
   ButtonGroup,
-  CodeBlock,
   DynamicTable,
   EmptyState,
   Heading,
@@ -27,6 +26,7 @@ import ForgeReconciler, {
   Tabs,
   Text,
   Textfield,
+  TextArea,
   Label,
   HelperMessage,
   xcss,
@@ -223,12 +223,10 @@ function Activity({ ledger }) {
   }));
   return (
     <Stack space="space.100">
-      <Inline spread="space-between" alignBlock="center" shouldWrap>
-        <Text size="small" color="color.text.subtle">
-          Latest {ledger.length} requests. Verdicts show the original policy decision; outcomes show what happened afterwards.
-        </Text>
-        <LedgerExport />
-      </Inline>
+      <Text size="small" color="color.text.subtle">
+        Latest {ledger.length} requests. Verdicts show the original policy decision; outcomes show what happened afterwards.
+      </Text>
+      <LedgerExport />
       <DynamicTable caption="Decision activity" head={head} rows={rows} rowsPerPage={10} />
     </Stack>
   );
@@ -261,7 +259,7 @@ function LedgerExport() {
       {csv && (
         <Stack space="space.050">
           <Text size="small">{csv.count} decisions, oldest first. Copy it into a spreadsheet or your audit file.</Text>
-          <CodeBlock language="text" text={csv.csv} showLineNumbers={false} />
+          <TextArea id="ledger-csv" isReadOnly isMonospaced resize="none" minimumRows={8} maxHeight="320px" value={csv.csv} />
         </Stack>
       )}
     </Stack>
@@ -291,8 +289,14 @@ function MandateEditor({ mandate, usage, onSaved, onStatus }) {
     }
   };
   const [message, setMessage] = useState(null);
-  const set = (field) => (e) => setDraft({ ...draft, [field]: e.target.value });
-  const setLimit = (field) => (e) => setDraft({ ...draft, limits: { ...draft.limits, [field]: e.target.value } });
+  const set = (field) => (e) => {
+    const value = e.target.value;
+    setDraft((d) => ({ ...d, [field]: value }));
+  };
+  const setLimit = (field) => (e) => {
+    const value = e.target.value;
+    setDraft((d) => ({ ...d, limits: { ...d.limits, [field]: value } }));
+  };
 
   const save = async () => {
     try {
@@ -348,7 +352,7 @@ function MandateEditor({ mandate, usage, onSaved, onStatus }) {
         <Heading size="small">Scope</Heading>
         <Box>
           <Label labelFor="projects">Projects the agent may change</Label>
-          <Textfield id="projects" value={draft.projects} onChange={set("projects")} placeholder="PAY, WEB" />
+          <Textfield id="projects" defaultValue={draft.projects} onChange={set("projects")} placeholder="PAY, WEB" />
           <HelperMessage>Project keys, comma separated. Nothing outside these projects is ever written.</HelperMessage>
         </Box>
         <Box>
@@ -358,48 +362,48 @@ function MandateEditor({ mandate, usage, onSaved, onStatus }) {
             isMulti
             options={KIND_OPTIONS}
             value={KIND_OPTIONS.filter((o) => draft.kinds.includes(o.value))}
-            onChange={(values) => setDraft({ ...draft, kinds: (values || []).map((v) => v.value) })}
+            onChange={(values) => setDraft((d) => ({ ...d, kinds: (values || []).map((v) => v.value) }))}
           />
         </Box>
         <Heading size="small">Hard rules (always refused)</Heading>
         <Box>
           <Label labelFor="blocked">Blocked labels</Label>
-          <Textfield id="blocked" value={draft.blockedLabels} onChange={set("blockedLabels")} />
+          <Textfield id="blocked" defaultValue={draft.blockedLabels} onChange={set("blockedLabels")} />
           <HelperMessage>Issues with these labels are never touched by an agent.</HelperMessage>
         </Box>
         <Box>
           <Label labelFor="types">Protected issue types</Label>
-          <Textfield id="types" value={draft.protectedTypes} onChange={set("protectedTypes")} />
+          <Textfield id="types" defaultValue={draft.protectedTypes} onChange={set("protectedTypes")} />
         </Box>
         <Heading size="small">Ask a person first</Heading>
         <Box>
           <Label labelFor="holdLabels">Sensitive labels</Label>
-          <Textfield id="holdLabels" value={draft.holdLabels} onChange={set("holdLabels")} />
+          <Textfield id="holdLabels" defaultValue={draft.holdLabels} onChange={set("holdLabels")} />
         </Box>
         <Inline space="space.200" shouldWrap>
           <Box>
             <Label labelFor="holdPriorities">Sensitive priorities</Label>
-            <Textfield id="holdPriorities" value={draft.holdPriorities} onChange={set("holdPriorities")} />
+            <Textfield id="holdPriorities" defaultValue={draft.holdPriorities} onChange={set("holdPriorities")} />
           </Box>
           <Box>
             <Label labelFor="holdStatuses">Sensitive statuses</Label>
-            <Textfield id="holdStatuses" value={draft.holdStatuses} onChange={set("holdStatuses")} />
+            <Textfield id="holdStatuses" defaultValue={draft.holdStatuses} onChange={set("holdStatuses")} />
           </Box>
           <Box>
             <Label labelFor="holdAboveRun">Hold after N writes in one run</Label>
-            <Textfield id="holdAboveRun" type="number" value={String(draft.holdAboveRun)} onChange={set("holdAboveRun")} />
+            <Textfield id="holdAboveRun" type="number" defaultValue={String(draft.holdAboveRun)} onChange={set("holdAboveRun")} />
           </Box>
         </Inline>
         <Heading size="small">Connected context (Teamwork Graph)</Heading>
         <Box>
           <Label labelFor="protectedGoals">Protected goals</Label>
-          <Textfield id="protectedGoals" value={draft.protectedGoals} onChange={set("protectedGoals")} placeholder="Q4 checkout launch" />
+          <Textfield id="protectedGoals" defaultValue={draft.protectedGoals} onChange={set("protectedGoals")} placeholder="Q4 checkout launch" />
           <HelperMessage>Goal names from Atlassian Goals. An agent change to any issue linked to one of these goals waits for a person. If the graph cannot be reached, the change waits too.</HelperMessage>
         </Box>
         <Inline space="space.150" alignBlock="end">
           <Box>
             <Label labelFor="graphKey">Check an issue</Label>
-            <Textfield id="graphKey" value={graphKey} onChange={(e) => setGraphKey(e.target.value)} />
+            <Textfield id="graphKey" defaultValue={graphKey} onChange={(e) => setGraphKey(e.target.value)} />
           </Box>
           <Button onClick={checkGraph}>Show linked goals</Button>
         </Inline>
@@ -408,20 +412,23 @@ function MandateEditor({ mandate, usage, onSaved, onStatus }) {
         <Inline space="space.200" shouldWrap>
           <Box>
             <Label labelFor="perRun">Per run</Label>
-            <Textfield id="perRun" type="number" value={String(draft.limits.perRun)} onChange={setLimit("perRun")} />
+            <Textfield id="perRun" type="number" defaultValue={String(draft.limits.perRun)} onChange={setLimit("perRun")} />
           </Box>
           <Box>
             <Label labelFor="perHour">Per hour</Label>
-            <Textfield id="perHour" type="number" value={String(draft.limits.perHour)} onChange={setLimit("perHour")} />
+            <Textfield id="perHour" type="number" defaultValue={String(draft.limits.perHour)} onChange={setLimit("perHour")} />
           </Box>
           <Box>
             <Label labelFor="perDay">Per day</Label>
-            <Textfield id="perDay" type="number" value={String(draft.limits.perDay)} onChange={setLimit("perDay")} />
+            <Textfield id="perDay" type="number" defaultValue={String(draft.limits.perDay)} onChange={setLimit("perDay")} />
           </Box>
         </Inline>
         <Box>
           <Label labelFor="expires">Expires (YYYY-MM-DD)</Label>
-          <Textfield id="expires" value={String(draft.expiresAt).slice(0, 10)} onChange={(e) => setDraft({ ...draft, expiresAt: `${e.target.value}T23:59:00Z` })} />
+          <Textfield id="expires" defaultValue={String(draft.expiresAt).slice(0, 10)} onChange={(e) => {
+              const day = e.target.value;
+              setDraft((d) => ({ ...d, expiresAt: `${day}T23:59:00Z` }));
+            }} />
         </Box>
         <Inline>
           <Button appearance="primary" onClick={save}>
@@ -460,11 +467,11 @@ function Simulator() {
       <Inline space="space.200" alignBlock="end">
         <Box xcss={xcss({ flexGrow: 1 })}>
           <Label labelFor="jql">Issues (JQL)</Label>
-          <Textfield id="jql" value={jql} onChange={(e) => setJql(e.target.value)} />
+          <Textfield id="jql" defaultValue={jql} onChange={(e) => setJql(e.target.value)} />
         </Box>
         <Box>
           <Label labelFor="to">Move them to</Label>
-          <Textfield id="to" value={toStatus} onChange={(e) => setToStatus(e.target.value)} />
+          <Textfield id="to" defaultValue={toStatus} onChange={(e) => setToStatus(e.target.value)} />
         </Box>
         <Button appearance="primary" onClick={run} isDisabled={busy}>
           {busy ? "Judging…" : "Simulate this run"}
@@ -520,7 +527,7 @@ function SetupCard({ onDone }) {
         <Inline space="space.150" alignBlock="end">
           <Box>
             <Label labelFor="seed-key">Project key</Label>
-            <Textfield id="seed-key" value={projectKey} onChange={(e) => setProjectKey(e.target.value)} />
+            <Textfield id="seed-key" defaultValue={projectKey} onChange={(e) => setProjectKey(e.target.value)} />
           </Box>
           <Button appearance="primary" onClick={run} isDisabled={busy}>
             {busy ? "Creating demo issues…" : "Create demo issues in Jira"}
