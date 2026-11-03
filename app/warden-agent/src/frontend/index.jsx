@@ -10,6 +10,7 @@ import ForgeReconciler, {
   Box,
   Button,
   ButtonGroup,
+  CodeBlock,
   DynamicTable,
   EmptyState,
   Heading,
@@ -222,10 +223,47 @@ function Activity({ ledger }) {
   }));
   return (
     <Stack space="space.100">
-      <Text size="small" color="color.text.subtle">
-        Latest {ledger.length} requests. Verdicts show the original policy decision; outcomes show what happened afterwards.
-      </Text>
+      <Inline spread="space-between" alignBlock="center" shouldWrap>
+        <Text size="small" color="color.text.subtle">
+          Latest {ledger.length} requests. Verdicts show the original policy decision; outcomes show what happened afterwards.
+        </Text>
+        <LedgerExport />
+      </Inline>
       <DynamicTable caption="Decision activity" head={head} rows={rows} rowsPerPage={10} />
+    </Stack>
+  );
+}
+
+/** The full ledger as CSV, ready to copy into a spreadsheet or an audit file. */
+function LedgerExport() {
+  const [csv, setCsv] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const run = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      setCsv(await invoke("exportLedger"));
+    } catch (e) {
+      setError(e.message || "The export failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Stack space="space.100">
+      <Inline>
+        <Button onClick={csv ? () => setCsv(null) : run} isDisabled={busy}>
+          {busy ? "Preparing…" : csv ? "Hide export" : "Export ledger (CSV)"}
+        </Button>
+      </Inline>
+      {error && <SectionMessage appearance="error">{error}</SectionMessage>}
+      {csv && (
+        <Stack space="space.050">
+          <Text size="small">{csv.count} decisions, oldest first. Copy it into a spreadsheet or your audit file.</Text>
+          <CodeBlock language="text" text={csv.csv} showLineNumbers={false} />
+        </Stack>
+      )}
     </Stack>
   );
 }

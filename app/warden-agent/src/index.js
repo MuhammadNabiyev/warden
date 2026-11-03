@@ -13,6 +13,7 @@ import { sanitizeMandate } from "./policy/defaults.js";
 import { listApprovals, listLedger, recentUsage, saveMandate } from "./store.js";
 import { seedDemo } from "./demo.js";
 import { linkedGoals } from "./graph.js";
+import { ledgerCsv } from "./export.js";
 
 /** Rovo passes the inputs in `payload`; the calling user's id sits in the context. */
 const accountOf = (payload, context) => context?.accountId || payload?.context?.accountId || context?.principal?.accountId || null;
@@ -141,6 +142,12 @@ resolver.define("simulate", async ({ payload, context }) => {
       deny: plan.filter((p) => p.verdict.decision === "deny").length,
     },
   };
+});
+
+/** The whole ledger as CSV, for auditors and spreadsheets. */
+resolver.define("exportLedger", async () => {
+  const entries = await listLedger(5000);
+  return { csv: ledgerCsv(entries), count: entries.length };
 });
 
 /** Setup check for connected context: which goals does the Teamwork Graph link to this issue? */
