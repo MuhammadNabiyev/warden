@@ -2,41 +2,44 @@ import requests
 
 
 def test_evaluate_plan_bulk_simulation_success():
-    endpoint = "http://localhost:4747/evaluate-plan"
+    url = "http://localhost:4747/evaluate-plan"
     payload = {
         "mandate": {
-            "status": "active",
             "projects": ["TEST"],
             "kinds": ["transition", "assign", "comment", "set_priority"],
             "blockedLabels": ["security"],
             "holdLabels": ["release-critical"],
             "protectedTypes": ["Epic"],
-            "holdPriorities": ["Highest"],
-            "holdStatuses": ["Done", "Closed"],
-            "limits": {"perHour": 20, "perDay": 60, "perRun": 10},
-            "holdAboveRun": 5,
+            "status": "active",
+            "expiresAt": "2099-12-31T23:59:59.000Z",
         },
         "proposals": [
             {
-                "kind": "comment",
-                "issueKey": "TEST-1",
+                "kind": "transition",
+                "issueKey": "TEST-101",
                 "projectKey": "TEST",
-                "issueType": "Task",
+                "issueType": "Story",
                 "labels": [],
+                "toStatus": "In Progress",
+                "runId": "bulk-success-run",
             },
             {
-                "kind": "comment",
-                "issueKey": "TEST-2",
+                "kind": "transition",
+                "issueKey": "TEST-102",
                 "projectKey": "TEST",
-                "issueType": "Task",
+                "issueType": "Story",
                 "labels": ["release-critical"],
+                "toStatus": "In Progress",
+                "runId": "bulk-success-run",
             },
             {
-                "kind": "comment",
-                "issueKey": "TEST-3",
+                "kind": "transition",
+                "issueKey": "TEST-103",
                 "projectKey": "TEST",
-                "issueType": "Task",
-                "labels": ["security"],
+                "issueType": "Epic",
+                "labels": [],
+                "toStatus": "In Progress",
+                "runId": "bulk-success-run",
             },
         ],
         "usage": [],
@@ -45,13 +48,13 @@ def test_evaluate_plan_bulk_simulation_success():
 
     try:
         response = requests.post(
-            endpoint,
+            url,
             json=payload,
             headers={"Content-Type": "application/json"},
             timeout=30,
         )
     except requests.RequestException as exc:
-        raise AssertionError(f"Request to {endpoint} failed: {exc}") from exc
+        raise AssertionError(f"Request to {url} failed: {exc}") from exc
 
     assert response.status_code == 200, (
         f"Expected HTTP 200, got {response.status_code}: {response.text}"
@@ -60,26 +63,32 @@ def test_evaluate_plan_bulk_simulation_success():
     try:
         body = response.json()
     except ValueError as exc:
-        raise AssertionError("Response was not valid JSON") from exc
+        raise AssertionError(f"Response was not valid JSON: {response.text}") from exc
 
-    assert isinstance(body, dict), "Response body should be a JSON object"
-    results = body.get("results")
+    assert isinstance(body, dict), f"Expected a JSON object, got {type(body).__name__}"
+    assert isinstance(body.get("results"), list), "Response must contain a results array"
+    assert len(body["results"]) == 3, "Expected one result for each proposal"
+
+    results = body["results"]
+    assert [result.get("issueKey") for result in results] == [
+        "TEST-101",
+        "TEST-102",
+        "TEST-103",
+    ], "Results should preserve the proposal order"
+    assert [result.get("decision") for result in results] == ["allow", "hold", "deny"]
+
+    for result in results:
+        assert isinstance(result.get("reasons"), list), (
+            f"Result for {result.get('issueKey')} must include a reasons array"
+        )
+
+    assert any(
+        reason.get("code") == "PROTECTED_ISSUE_TYPE"
+        for reason in results[2]["reasons"]
+    ), "The Epic proposal should be denied for its protected issue type"
+
     summary = body.get("summary")
-
-    assert isinstance(results, list), "Response should include a results array"
-    assert len(results) == 3, f"Expected 3 results, got {len(results)}"
-    assert isinstance(summary, dict), "Response should include a summary object"
-
-    expected = [
-        ("TEST-1", "allow"),
-        ("TEST-2", "hold"),
-        ("TEST-3", "deny"),
-    ]
-    for result, (issue_key, decision) in zip(results, expected):
-        assert result.get("issueKey") == issue_key
-        assert result.get("decision") == decision
-        assert isinstance(result.get("reasons"), list)
-
+    assert isinstance(summary, dict), "Response must contain a summary object"
     assert summary.get("allow") == 1
     assert summary.get("hold") == 1
     assert summary.get("deny") == 1

@@ -9,16 +9,18 @@
  * POST /evaluate           { mandate?, proposal, usage?, now? }    → { decision, reasons }
  * POST /evaluate-plan      { mandate?, proposals, usage?, now? }   → { results, summary }
  * POST /mandate/sanitize   { input, previous? }                     → { mandate } or 400 { error }
+ * POST /ledger/csv         { entries }                              → text/csv (the auditor export)
  */
 import http from "node:http";
 import { evaluate, evaluatePlan } from "../src/policy/evaluate.js";
 import { defaultMandate, sanitizeMandate } from "../src/policy/defaults.js";
+import { ledgerCsv } from "../src/export.js";
 
 const PORT = Number(process.env.PORT) || 4747;
 
-const send = (res, status, body) => {
-  res.writeHead(status, { "content-type": "application/json" });
-  res.end(JSON.stringify(body));
+const send = (res, status, body, type = "application/json") => {
+  res.writeHead(status, { "content-type": type });
+  res.end(type === "application/json" ? JSON.stringify(body) : body);
 };
 
 const readJson = (req) =>
@@ -62,6 +64,10 @@ const routes = {
     const result = sanitizeMandate(body.input || {}, body.previous || defaultMandate());
     return result.error ? [400, { error: result.error }] : [200, result];
   },
+  "POST /ledger/csv": (body) => {
+    if (!Array.isArray(body.entries)) return [400, { error: "`entries` must be an array." }];
+    return [200, ledgerCsv(body.entries), "text/csv; charset=utf-8"];
+  },
 };
 
 http
@@ -70,8 +76,8 @@ http
     if (!route) return send(res, 404, { error: "Not found." });
     try {
       const body = req.method === "POST" ? await readJson(req) : {};
-      const [status, payload] = route(body);
-      send(res, status, payload);
+      const [status, payload, type] = route(body);
+      send(res, status, payload, type);
     } catch (e) {
       send(res, 400, { error: e.message });
     }

@@ -19,20 +19,18 @@ def test_evaluate_plan_invalid_proposals_type():
         raise AssertionError(f"Request to {url} failed: {exc}") from exc
 
     assert response.status_code == 400, (
-        f"Expected status 400, received {response.status_code}: {response.text}"
+        f"Expected HTTP 400, got {response.status_code}: {response.text}"
     )
 
     try:
         body = response.json()
     except ValueError as exc:
-        raise AssertionError(
-            f"Expected a JSON error response, received: {response.text}"
-        ) from exc
+        raise AssertionError(f"Expected a JSON error response, got: {response.text}") from exc
 
-    assert isinstance(body, dict), f"Expected a JSON object, received: {body!r}"
-    assert "error" in body, f"Expected an error message in the response: {body!r}"
-    assert isinstance(body["error"], str) and body["error"].strip(), (
-        f"Expected a non-empty error message, received: {body['error']!r}"
+    assert isinstance(body, dict), f"Expected a JSON object, got {type(body).__name__}"
+    error = body.get("error")
+    assert isinstance(error, str) and error.strip(), (
+        f"Expected a non-empty error message, got: {body}"
     )
 
 

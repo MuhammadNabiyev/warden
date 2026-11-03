@@ -1234,13 +1234,13 @@ body {
         
         <div class="coverage-summary">
           <ul class="coverage-list text-body">
-            <li><span class="coverage-highlight">10/10</span> of tests passed</li>
+            <li><span class="coverage-highlight">12/12</span> of tests passed</li>
             <li><span class="coverage-highlight">Key gaps / risks:</span>
             
               <ul>
-<li>Jira reads and writes, the approval queue and the KVS ledger run only inside Forge; the harness does not expose them. They are covered by manual end-to-end checks on a Forge site.</li>
-<li>The Teamwork Graph lookup (<code>src/graph.js</code>) needs a live site; the harness covers its policy effect (PROTECTED_GOAL, CONTEXT_UNAVAILABLE) through proposal fields.</li>
-<li>13 Vitest unit and property tests (fast-check) cover the engine in-process alongside these black-box API tests.</li>
+<li>Jira reads and writes, the approval queue and the KVS ledger run only inside Forge, and the harness does not expose them. They were verified end to end on a Rovo-enabled site: real Rovo chat produced Cleared, Refused and Hold verdicts, and the Hold was approved.</li>
+<li>The Teamwork Graph lookup (<code>src/graph.js</code>) needs a live site. The harness covers its policy effect (PROTECTED_GOAL, CONTEXT_UNAVAILABLE) through proposal fields.</li>
+<li>16 Vitest unit and property tests (fast-check) cover the engine and the export in-process.</li>
 </ul>
 
             </li>
@@ -1285,6 +1285,14 @@ body {
               <div class="table-cell"><span class="text-body">Requirement: Mandate defaults and validation</span></div>
               <div class="table-cell"><span class="text-body">3</span></div>
               <div class="table-cell"><span class="text-body">3</span></div>
+              <div class="table-cell"><span class="text-body">0</span></div>
+            </div>
+        
+
+            <div class="table-row">
+              <div class="table-cell"><span class="text-body">Requirement: Ledger export for auditors (POST /ledger/csv)</span></div>
+              <div class="table-cell"><span class="text-body">2</span></div>
+              <div class="table-cell"><span class="text-body">2</span></div>
               <div class="table-cell"><span class="text-body">0</span></div>
             </div>
         
@@ -1338,13 +1346,13 @@ body {
             <div class="test-wrapper">
 <div class="test-card">
                 <div class="test-header">
-                  <h4 class="text-body-medium">TC001 evaluate_single_write_policy_decision</h4>
+                  <h4 class="text-body-medium">TC001 evaluate_single_write_decision</h4>
                 </div>
                 <div class="test-content">
                   <div class="test-field">
                     <div class="test-field-label text-body-medium">Test Code</div>
                     <div class="test-field-value text-body">
-                      <a href="./TC001_evaluate_single_write_policy_decision.py" class="text-link">TC001_evaluate_single_write_policy_decision.py</a>
+                      <a href="./TC001_evaluate_single_write_decision.py" class="text-link">TC001_evaluate_single_write_decision.py</a>
                     </div>
                   </div>
                   <div class="test-field">
@@ -1354,7 +1362,7 @@ body {
                   <div class="test-field">
                     <div class="test-field-label text-body-medium">Test Visualization and Result</div>
                     <div class="test-field-value text-body">
-                      <a href="https://www.testsprite.com/dashboard/mcp/tests/44d5c7af-0d75-57a5-942d-351e7d07be74/test/b165f291-df2f-44b7-b270-2a9aeb48b584" class="text-link">View Results</a>
+                      <a href="https://www.testsprite.com/dashboard/mcp/tests/44d5c7af-0d75-57a5-942d-351e7d07be74/test/565ffda6-79e9-4c19-b07a-64ae840c3465" class="text-link">View Results</a>
                     </div>
                   </div>
                   <div class="test-field">
@@ -1377,7 +1385,7 @@ body {
                   </div>
                   <div class="test-field">
                     <div class="test-field-label text-body-medium">Analysis / Findings</div>
-                    <div class="test-field-value text-body">Allowed writes return allow with no reasons; sensitive context returns hold with codes.</div>
+                    <div class="test-field-value text-body">Allowed writes return allow with no reasons; sensitive context returns hold with reason codes.</div>
                   </div>
                 </div>
               </div>
@@ -1467,7 +1475,7 @@ body {
                   </div>
                   <div class="test-field">
                     <div class="test-field-label text-body-medium">Analysis / Findings</div>
-                    <div class="test-field-value text-body">Missing proposal / malformed JSON return 400 with an error message.</div>
+                    <div class="test-field-value text-body">Missing proposal and malformed JSON return 400 with an error.</div>
                   </div>
                 </div>
               </div>
@@ -1540,7 +1548,7 @@ body {
                   </div>
                   <div class="test-field">
                     <div class="test-field-label text-body-medium">Analysis / Findings</div>
-                    <div class="test-field-value text-body">Per-item verdicts and the allow/hold/deny summary match the items.</div>
+                    <div class="test-field-value text-body">Per-item verdicts and the allow/hold/deny summary agree.</div>
                   </div>
                 </div>
               </div>
@@ -1703,7 +1711,7 @@ body {
                   </div>
                   <div class="test-field">
                     <div class="test-field-label text-body-medium">Analysis / Findings</div>
-                    <div class="test-field-value text-body">Default mandate matches the documented conservative shape.</div>
+                    <div class="test-field-value text-body">The default mandate matches the documented conservative shape.</div>
                   </div>
                 </div>
               </div>
@@ -1748,19 +1756,19 @@ body {
                   </div>
                   <div class="test-field">
                     <div class="test-field-label text-body-medium">Analysis / Findings</div>
-                    <div class="test-field-value text-body">Comma lists trimmed, project keys upper-cased, unknown kinds dropped, version bumped.</div>
+                    <div class="test-field-value text-body">Lists trimmed, project keys upper-cased, unknown kinds dropped, version bumped. **Found a real bug in run 1:** the mandate name was not trimmed. Fixed in `defaults.js`; passes since.</div>
                   </div>
                 </div>
               </div>
 <div class="test-card">
                 <div class="test-header">
-                  <h4 class="text-body-medium">TC009 mandate_sanitize_invalid_expires_or_limits</h4>
+                  <h4 class="text-body-medium">TC009 mandate_sanitize_invalid_input</h4>
                 </div>
                 <div class="test-content">
                   <div class="test-field">
                     <div class="test-field-label text-body-medium">Test Code</div>
                     <div class="test-field-value text-body">
-                      <a href="./TC009_mandate_sanitize_invalid_expires_or_limits.py" class="text-link">TC009_mandate_sanitize_invalid_expires_or_limits.py</a>
+                      <a href="./TC009_mandate_sanitize_invalid_input.py" class="text-link">TC009_mandate_sanitize_invalid_input.py</a>
                     </div>
                   </div>
                   <div class="test-field">
@@ -1770,7 +1778,7 @@ body {
                   <div class="test-field">
                     <div class="test-field-label text-body-medium">Test Visualization and Result</div>
                     <div class="test-field-value text-body">
-                      <a href="https://www.testsprite.com/dashboard/mcp/tests/44d5c7af-0d75-57a5-942d-351e7d07be74/test/65e25d4f-9cee-4860-90e4-b7671c893c6d" class="text-link">View Results</a>
+                      <a href="https://www.testsprite.com/dashboard/mcp/tests/44d5c7af-0d75-57a5-942d-351e7d07be74/test/0c340e3f-7996-4b9b-80bf-2dfddd102ef5" class="text-link">View Results</a>
                     </div>
                   </div>
                   <div class="test-field">
@@ -1793,7 +1801,125 @@ body {
                   </div>
                   <div class="test-field">
                     <div class="test-field-label text-body-medium">Analysis / Findings</div>
-                    <div class="test-field-value text-body">Invalid expiry and perHour > perDay are rejected with 400.</div>
+                    <div class="test-field-value text-body">Invalid expiry and an hourly limit above the daily limit are rejected with 400.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+                <div class="requirement-wrapper accordion-item active">
+          <div class="accordion-header" onclick="toggleAccordion(this)">
+            <div class="requirement-content">
+                                          <div class="requirement-title-row">
+              <h3 class="title-requirement">Requirement: Ledger export for auditors (POST /ledger/csv)</h3>
+                <div class="requirement-status-tag status-success">
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="7.99961" cy="7.99998" r="6.4" fill="#10A363" fill-opacity="0.2"/>
+                <path d="M5.59961 8.00002L7.19961 9.60002L10.3996 6.40002" stroke="#19C379" stroke-width="1.28" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>2/2</span>
+            </div>
+              </div>
+              <p class="text-body-medium requirement-description">Proper error handling for API calls and invalid data scenarios.</p>
+            </div>
+            <div class="accordion-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11.4276 6C11.9145 6 12.1687 6.61626 11.875 7.01439L11.8316 7.06689L8.40295 10.817C8.30455 10.9246 8.17364 10.9892 8.03476 10.9988C7.89589 11.0083 7.7586 10.9621 7.64865 10.8688L7.59493 10.817L4.16629 7.06689L4.11886 7.00814L4.088 6.96002L4.05714 6.90002L4.04743 6.87752L4.032 6.83564L4.01371 6.76814L4.008 6.73501L4.00229 6.69751L4 6.66189V6.58814L4.00286 6.55188L4.008 6.51438L4.01371 6.48188L4.032 6.41438L4.04743 6.37251L4.08743 6.29L4.12457 6.23375L4.16629 6.18313L4.22 6.13125L4.26401 6.0975L4.31886 6.06375L4.33944 6.05313L4.37772 6.03625L4.43944 6.01625L4.46972 6.01L4.50401 6.00375L4.53658 6.00125L11.4276 6Z" fill="var(--fg-secondary)"/>
+              </svg>
+            </div>
+          </div>
+
+            <div class="accordion-content">
+            <div class="test-wrapper">
+<div class="test-card">
+                <div class="test-header">
+                  <h4 class="text-body-medium">TC011 ledger_csv_export_format</h4>
+                </div>
+                <div class="test-content">
+                  <div class="test-field">
+                    <div class="test-field-label text-body-medium">Test Code</div>
+                    <div class="test-field-value text-body">
+                      <a href="./TC011_ledger_csv_export_format.py" class="text-link">TC011_ledger_csv_export_format.py</a>
+                    </div>
+                  </div>
+                  <div class="test-field">
+                    <div class="test-field-label text-body-medium">Test Error</div>
+                    <div class="test-field-value text-body">N/A</div>
+                  </div>
+                  <div class="test-field">
+                    <div class="test-field-label text-body-medium">Test Visualization and Result</div>
+                    <div class="test-field-value text-body">
+                      <a href="https://www.testsprite.com/dashboard/mcp/tests/44d5c7af-0d75-57a5-942d-351e7d07be74/test/6961421a-74f0-41a2-a5ea-b9e4b791163b" class="text-link">View Results</a>
+                    </div>
+                  </div>
+                  <div class="test-field">
+                    <div class="test-field-label text-body-medium">Status</div>
+                    <div class="test-field-value">
+                      <div class="status-wrapper">
+                <div class="status-icon">
+                    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="7.99961" cy="7.99998" r="6.4" fill="#10A363" fill-opacity="0.2"/>
+                        <path d="M5.59961 8.00002L7.19961 9.60002L10.3996 6.40002" stroke="#19C379" stroke-width="1.28" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <span class="text-body status-pass">Pass</span>
+            </div>
+                    </div>
+                  </div>
+                  <div class="test-field">
+                    <div class="test-field-label text-body-medium">Severity</div>
+                    <div class="test-field-value text-body">N/A</div>
+                  </div>
+                  <div class="test-field">
+                    <div class="test-field-label text-body-medium">Analysis / Findings</div>
+                    <div class="test-field-value text-body">Exact header, CRLF endings, oldest-first order, every rule code in one cell. **Found a real gap in run 1:** the last record had no line ending. Fixed in `export.js`. Run 2 also showed the export rejected the flat `{verdict: "deny", reasons}` shape; the export now accepts both shapes. Passes in run 3.</div>
+                  </div>
+                </div>
+              </div>
+<div class="test-card">
+                <div class="test-header">
+                  <h4 class="text-body-medium">TC012 ledger_csv_export_escaping_and_formula_safety</h4>
+                </div>
+                <div class="test-content">
+                  <div class="test-field">
+                    <div class="test-field-label text-body-medium">Test Code</div>
+                    <div class="test-field-value text-body">
+                      <a href="./TC012_ledger_csv_export_escaping_and_formula_safety.py" class="text-link">TC012_ledger_csv_export_escaping_and_formula_safety.py</a>
+                    </div>
+                  </div>
+                  <div class="test-field">
+                    <div class="test-field-label text-body-medium">Test Error</div>
+                    <div class="test-field-value text-body">N/A</div>
+                  </div>
+                  <div class="test-field">
+                    <div class="test-field-label text-body-medium">Test Visualization and Result</div>
+                    <div class="test-field-value text-body">
+                      <a href="https://www.testsprite.com/dashboard/mcp/tests/44d5c7af-0d75-57a5-942d-351e7d07be74/test/94df5f35-9cb6-44b2-b918-6266a37fb937" class="text-link">View Results</a>
+                    </div>
+                  </div>
+                  <div class="test-field">
+                    <div class="test-field-label text-body-medium">Status</div>
+                    <div class="test-field-value">
+                      <div class="status-wrapper">
+                <div class="status-icon">
+                    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="7.99961" cy="7.99998" r="6.4" fill="#10A363" fill-opacity="0.2"/>
+                        <path d="M5.59961 8.00002L7.19961 9.60002L10.3996 6.40002" stroke="#19C379" stroke-width="1.28" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <span class="text-body status-pass">Pass</span>
+            </div>
+                    </div>
+                  </div>
+                  <div class="test-field">
+                    <div class="test-field-label text-body-medium">Severity</div>
+                    <div class="test-field-value text-body">N/A</div>
+                  </div>
+                  <div class="test-field">
+                    <div class="test-field-label text-body-medium">Analysis / Findings</div>
+                    <div class="test-field-value text-body">RFC 4180 quoting and formula neutralisation for = + - @. Run 1 sent `decisionId` instead of `id`; the export now accepts both. In run 3 the generated test checked the header with `decision_id` as column 2 but read ids from column 1 (`decided_at`); that test bug was corrected (one index) and the test passes against the harness.</div>
                   </div>
                 </div>
               </div>
@@ -1827,13 +1953,13 @@ body {
             <div class="test-wrapper">
 <div class="test-card">
                 <div class="test-header">
-                  <h4 class="text-body-medium">TC010 health_endpoint_liveness_check</h4>
+                  <h4 class="text-body-medium">TC010 health_check_liveness</h4>
                 </div>
                 <div class="test-content">
                   <div class="test-field">
                     <div class="test-field-label text-body-medium">Test Code</div>
                     <div class="test-field-value text-body">
-                      <a href="./TC010_health_endpoint_liveness_check.py" class="text-link">TC010_health_endpoint_liveness_check.py</a>
+                      <a href="./TC010_health_check_liveness.py" class="text-link">TC010_health_check_liveness.py</a>
                     </div>
                   </div>
                   <div class="test-field">
@@ -1843,7 +1969,7 @@ body {
                   <div class="test-field">
                     <div class="test-field-label text-body-medium">Test Visualization and Result</div>
                     <div class="test-field-value text-body">
-                      <a href="https://www.testsprite.com/dashboard/mcp/tests/44d5c7af-0d75-57a5-942d-351e7d07be74/test/4152173c-753e-4d64-ab26-b08be2bc9ad5" class="text-link">View Results</a>
+                      <a href="https://www.testsprite.com/dashboard/mcp/tests/44d5c7af-0d75-57a5-942d-351e7d07be74/test/c1a569de-3f9f-4ebb-b30d-248603d08593" class="text-link">View Results</a>
                     </div>
                   </div>
                   <div class="test-field">

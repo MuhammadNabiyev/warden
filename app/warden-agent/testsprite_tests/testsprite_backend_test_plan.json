@@ -1,18 +1,18 @@
 [
   {
     "id": "TC001",
-    "title": "evaluate_single_write_policy_decision",
+    "title": "evaluate_single_write_decision",
     "description": "Test POST /evaluate endpoint with a valid proposal, mandate, usage array, and now timestamp to verify it returns a 200 response with a decision of allow, hold, or deny and the correct reasons array."
   },
   {
     "id": "TC002",
     "title": "evaluate_single_write_blocked_label_or_revoked_mandate",
-    "description": "Test POST /evaluate endpoint with a proposal targeting a blocked label or a revoked mandate to verify it returns a 200 response with a deny decision and appropriate reason codes such as BLOCKED_LABEL or MANDATE_REVOKED."
+    "description": "Test POST /evaluate endpoint with a proposal targeting a blocked label or revoked mandate to verify it returns a 200 response with a deny decision and appropriate reason codes such as BLOCKED_LABEL or MANDATE_REVOKED."
   },
   {
     "id": "TC003",
     "title": "evaluate_single_write_invalid_request_body",
-    "description": "Test POST /evaluate endpoint with invalid JSON body or missing required proposal field to verify it returns a 400 response with an error message indicating validation failure."
+    "description": "Test POST /evaluate endpoint with invalid JSON body or missing proposal field to verify it returns a 400 response with an error message indicating validation failure."
   },
   {
     "id": "TC004",
@@ -37,16 +37,26 @@
   {
     "id": "TC008",
     "title": "mandate_sanitize_valid_input",
-    "description": "Test POST /mandate/sanitize endpoint with valid admin input and an optional previous mandate to verify it returns a 200 response with a normalized mandate and incremented version suitable for saving and later policy evaluation."
+    "description": "Test POST /mandate/sanitize endpoint with valid admin input and an optional previous mandate to verify it returns a 200 response with a normalized mandate and incremented version suitable for saving."
   },
   {
     "id": "TC009",
-    "title": "mandate_sanitize_invalid_expires_or_limits",
+    "title": "mandate_sanitize_invalid_input",
     "description": "Test POST /mandate/sanitize endpoint with invalid expiresAt value or perHour limit greater than perDay to verify it returns a 400 response with an error message and rejects the form submission, keeping the previous mandate unchanged."
   },
   {
     "id": "TC010",
-    "title": "health_endpoint_liveness_check",
+    "title": "health_check_liveness",
     "description": "Test GET /health endpoint to verify it returns a 200 response with { ok: true } indicating the local policy harness is running and ready for policy requests."
+  },
+  {
+    "id": "TC011",
+    "title": "ledger_csv_export_format",
+    "description": "POST /ledger/csv with three entries given out of time order (one allow with no reasons, one deny with reasons BLOCKED_LABEL and RUN_LIMIT, one hold approved by a person). Verify status 200, content-type text/csv, the exact header row decided_at,decision_id,source,actor,issue,action,change,verdict,rules,outcome,approved_by,approved_at,mandate_version,error, CRLF line endings, rows sorted oldest first by `at`, and the deny row's rules cell equal to 'BLOCKED_LABEL RUN_LIMIT'."
+  },
+  {
+    "id": "TC012",
+    "title": "ledger_csv_export_escaping_and_formula_safety",
+    "description": "POST /ledger/csv with entries whose `change` contains a comma, double quotes and a newline, and whose `change` or `error` starts with =, +, - or @. Verify RFC 4180 quoting (wrapped in double quotes, inner quotes doubled) and that every formula-like cell is prefixed with a single quote. Also verify POST /ledger/csv with entries that is not an array returns 400 with an error, and an empty array returns only the header row."
   }
 ]

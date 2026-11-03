@@ -50,7 +50,7 @@ export function sanitizeMandate(input, previous) {
   return {
     mandate: {
       ...previous,
-      name: String(input.name || previous.name).slice(0, 60),
+      name: (String(input.name ?? "").trim() || previous.name).slice(0, 60),
       kinds,
       projects: list(input.projects).map((p) => p.toUpperCase()),
       blockedLabels: list(input.blockedLabels),

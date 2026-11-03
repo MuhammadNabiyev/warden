@@ -1,67 +1,49 @@
 import requests
+from datetime import datetime, timezone
 
 
 def test_evaluate_plan_exceed_limits_mid_sequence():
-    base_url = "http://localhost:4747"
-    run_id = "tc005-run"
+    endpoint = "http://localhost:4747/evaluate-plan"
+    now = datetime.now(timezone.utc).isoformat()
+
+    def proposal(issue_key, labels=None):
+        return {
+            "kind": "transition",
+            "issueKey": issue_key,
+            "projectKey": "TEST",
+            "issueType": "Task",
+            "labels": labels or [],
+            "toStatus": "In Progress",
+            "runId": "tc005-run",
+        }
+
     payload = {
         "mandate": {
-            "projects": ["PROJ"],
+            "status": "active",
+            "projects": ["TEST"],
+            "kinds": ["transition"],
             "blockedLabels": ["security"],
+            "protectedTypes": ["Epic"],
             "limits": {
-                "perHour": 20,
-                "perDay": 60,
                 "perRun": 2,
+                "perHour": 100,
+                "perDay": 100,
             },
-            "holdAboveRun": 10,
         },
         "proposals": [
-            {
-                "kind": "transition",
-                "issueKey": "PROJ-1",
-                "projectKey": "PROJ",
-                "issueType": "Task",
-                "labels": [],
-                "runId": run_id,
-            },
-            {
-                "kind": "transition",
-                "issueKey": "PROJ-2",
-                "projectKey": "PROJ",
-                "issueType": "Task",
-                "labels": ["security"],
-                "runId": run_id,
-            },
-            {
-                "kind": "transition",
-                "issueKey": "PROJ-3",
-                "projectKey": "PROJ",
-                "issueType": "Task",
-                "labels": [],
-                "runId": run_id,
-            },
-            {
-                "kind": "transition",
-                "issueKey": "PROJ-4",
-                "projectKey": "PROJ",
-                "issueType": "Task",
-                "labels": [],
-                "runId": run_id,
-            },
+            proposal("TEST-501"),
+            proposal("TEST-502", ["security"]),
+            proposal("TEST-503"),
+            proposal("TEST-504"),
         ],
         "usage": [],
-        "now": "2026-11-03T12:00:00.000Z",
+        "now": now,
     }
 
     try:
-        response = requests.post(
-            f"{base_url}/evaluate-plan",
-            json=payload,
-            headers={"Content-Type": "application/json"},
-            timeout=30,
-        )
+        response = requests.post(endpoint, json=payload, timeout=30)
     except requests.RequestException as exc:
-        raise AssertionError(f"Request to /evaluate-plan failed: {exc}") from exc
+        assert False, f"Request to {endpoint} failed: {exc}"
 
     assert response.status_code == 200, (
         f"Expected HTTP 200, got {response.status_code}: {response.text}"
@@ -70,46 +52,41 @@ def test_evaluate_plan_exceed_limits_mid_sequence():
     try:
         body = response.json()
     except ValueError as exc:
-        raise AssertionError("Response body was not valid JSON") from exc
+        assert False, f"Response was not valid JSON: {exc}"
 
-    assert isinstance(body, dict), "Response should be a JSON object"
+    assert isinstance(body, dict), "Expected a JSON object response"
     results = body.get("results")
     summary = body.get("summary")
-    assert isinstance(results, list) and len(results) == 4, (
-        "Expected one result for each of the four proposals"
-    )
-    assert isinstance(summary, dict), "Response should include a summary object"
+    assert isinstance(results, list), "Expected results to be a list"
+    assert len(results) == 4, f"Expected 4 results, got {len(results)}"
+    assert isinstance(summary, dict), "Expected summary to be an object"
 
-    assert [result.get("issueKey") for result in results] == [
-        "PROJ-1",
-        "PROJ-2",
-        "PROJ-3",
-        "PROJ-4",
+    assert [item.get("issueKey") for item in results] == [
+        "TEST-501",
+        "TEST-502",
+        "TEST-503",
+        "TEST-504",
     ]
-    assert [result.get("decision") for result in results] == [
+    assert [item.get("decision") for item in results] == [
         "allow",
         "deny",
         "allow",
         "deny",
-    ], "The blocked proposal should not consume run budget; the final proposal should exceed it"
+    ]
 
-    blocked_codes = {
-        reason.get("code")
-        for reason in results[1].get("reasons", [])
-        if isinstance(reason, dict)
-    }
-    assert "BLOCKED_LABEL" in blocked_codes
+    blocked_reasons = [reason.get("code") for reason in results[1].get("reasons", [])]
+    assert "BLOCKED_LABEL" in blocked_reasons, (
+        f"Expected BLOCKED_LABEL for TEST-502, got {blocked_reasons}"
+    )
 
-    limit_codes = {
-        reason.get("code")
-        for reason in results[3].get("reasons", [])
-        if isinstance(reason, dict)
-    }
-    assert "RUN_LIMIT" in limit_codes
+    limit_reasons = [reason.get("code") for reason in results[3].get("reasons", [])]
+    assert "RUN_LIMIT" in limit_reasons, (
+        f"Expected RUN_LIMIT for TEST-504, got {limit_reasons}"
+    )
 
-    assert summary.get("allow") == 2
-    assert summary.get("hold") == 0
-    assert summary.get("deny") == 2
+    assert summary.get("allow") == 2, f"Unexpected summary: {summary}"
+    assert summary.get("hold") == 0, f"Unexpected summary: {summary}"
+    assert summary.get("deny") == 2, f"Unexpected summary: {summary}"
 
 
 if __name__ == "__main__":

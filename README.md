@@ -65,14 +65,14 @@ Rovo chat / MCP client
 ```bash
 cd app/warden-agent
 npm install
-npm test                      # 13 Vitest unit and property tests (fast-check)
+npm test                      # 16 Vitest unit and property tests (fast-check)
 forge deploy -e development
 forge install --site <your-site>.atlassian.net --product jira -e development
 ```
 
 ### Black-box tests
 
-`scripts/policy-server.mjs` serves the policy engine over HTTP on port 4747 with no Jira access, so external tools can test the exact code that runs in Forge. The [TestSprite](https://www.testsprite.com) suite in `app/warden-agent/testsprite_tests` runs 10 API tests against it (10/10 passing, see the [report](app/warden-agent/testsprite_tests/testsprite-mcp-test-report.md)).
+`scripts/policy-server.mjs` serves the policy engine and the ledger export over HTTP on port 4747 with no Jira access, so external tools can test the exact code that runs in Forge. The [TestSprite](https://www.testsprite.com) suite in `app/warden-agent/testsprite_tests` runs 12 API tests against it, covering the policy engine and the ledger export. It found two real bugs, both fixed (see the [report](app/warden-agent/testsprite_tests/testsprite-mcp-test-report.md)).
 
 ```bash
 node scripts/policy-server.mjs

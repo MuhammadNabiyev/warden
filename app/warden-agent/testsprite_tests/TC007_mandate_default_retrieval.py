@@ -1,5 +1,5 @@
-import datetime
 import requests
+from datetime import datetime, timezone
 
 
 def test_mandate_default_retrieval():
@@ -20,34 +20,35 @@ def test_mandate_default_retrieval():
         raise AssertionError("Response body is not valid JSON") from exc
 
     assert isinstance(mandate, dict), "Expected the default mandate to be a JSON object"
-
-    assert mandate.get("projects") == [], "Default projects should be an empty list"
+    assert mandate.get("projects") == [], "Expected default projects to be empty"
     assert mandate.get("blockedLabels") == ["security"]
     assert mandate.get("holdLabels") == ["release-critical", "customer-escalation"]
     assert mandate.get("protectedTypes") == ["Epic"]
     assert mandate.get("holdPriorities") == ["Highest"]
     assert mandate.get("holdStatuses") == ["Done", "Closed"]
-    assert mandate.get("limits") == {"perHour": 20, "perDay": 60, "perRun": 10}
-    assert mandate.get("holdAboveRun") == 5
     assert mandate.get("status") == "active"
     assert mandate.get("version") == 1
+    assert mandate.get("holdAboveRun") == 5
+
+    limits = mandate.get("limits")
+    assert isinstance(limits, dict), "Expected limits to be an object"
+    assert limits.get("perHour") == 20
+    assert limits.get("perDay") == 60
+    assert limits.get("perRun") == 10
 
     expires_at = mandate.get("expiresAt")
-    assert isinstance(expires_at, str) and expires_at, "Expected an expiresAt timestamp"
-
+    assert isinstance(expires_at, str) and expires_at, "Expected expiresAt to be a non-empty string"
     try:
-        parsed_expiry = datetime.datetime.fromisoformat(
-            expires_at.replace("Z", "+00:00")
-        )
+        expiry = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
     except ValueError as exc:
-        raise AssertionError(f"expiresAt is not a valid ISO timestamp: {expires_at}") from exc
+        raise AssertionError(f"expiresAt is not a valid ISO date string: {expires_at}") from exc
 
-    assert parsed_expiry.tzinfo is not None, "expiresAt should include a timezone"
-    now = datetime.datetime.now(datetime.timezone.utc)
-    remaining = parsed_expiry.astimezone(datetime.timezone.utc) - now
-    assert datetime.timedelta(days=29) <= remaining <= datetime.timedelta(days=31), (
-        f"Expected default expiry to be approximately 30 days in the future; "
-        f"got {expires_at}"
+    if expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=timezone.utc)
+
+    days_until_expiry = (expiry - datetime.now(timezone.utc)).total_seconds() / 86400
+    assert 29 <= days_until_expiry <= 31, (
+        f"Expected expiry to be about 30 days from now, got {days_until_expiry:.2f} days"
     )
 
 

@@ -1,5 +1,7 @@
 /**
  * Ledger export for auditors: one CSV row per decision, oldest first, every rule that fired.
+ * Accepts the ledger shape ({ verdict: { decision, reasons } }) and the flat shape
+ * ({ verdict: "deny", reasons }) that external tools tend to send.
  */
 const COLUMNS = ["decided_at", "decision_id", "source", "actor", "issue", "action", "change", "verdict", "rules", "outcome", "approved_by", "approved_at", "mandate_version", "error"];
 
@@ -15,19 +17,20 @@ export function ledgerCsv(entries) {
     .sort((a, b) => String(a.at).localeCompare(String(b.at)))
     .map((e) => [
       e.at,
-      e.id,
+      e.id ?? e.decisionId,
       e.source,
       e.actor,
       e.issueKey,
       e.kind,
       e.change,
-      e.verdict?.decision,
-      (e.verdict?.reasons || []).map((r) => r.code).join(" "),
+      typeof e.verdict === "string" ? e.verdict : e.verdict?.decision,
+      (e.verdict?.reasons || e.reasons || []).map((r) => r.code).join(" "),
       e.status,
       e.approvedBy,
       e.approvedAt,
       e.mandateVersion,
       e.error,
     ]);
-  return [COLUMNS, ...rows].map((r) => r.map(csvCell).join(",")).join("\r\n");
+  // Every record, the last included, ends with CRLF so exports can be appended and concatenated.
+  return [COLUMNS, ...rows].map((r) => `${r.map(csvCell).join(",")}\r\n`).join("");
 }

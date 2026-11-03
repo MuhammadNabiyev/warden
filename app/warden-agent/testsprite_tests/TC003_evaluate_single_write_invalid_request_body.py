@@ -1,44 +1,42 @@
 import requests
 
-BASE_URL = "http://localhost:4747"
-
 
 def test_evaluate_single_write_invalid_request_body():
-    headers = {"Content-Type": "application/json"}
+    url = "http://localhost:4747/evaluate"
+    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+    invalid_requests = [
+        {"data": "{", "description": "malformed JSON"},
+        {"json": {}, "description": "missing proposal"},
+    ]
 
-    try:
-        invalid_json_response = requests.post(
-            f"{BASE_URL}/evaluate",
-            data='{"proposal":',
-            headers=headers,
-            timeout=30,
-        )
-        assert invalid_json_response.status_code == 400, (
-            f"Expected 400 for invalid JSON, got {invalid_json_response.status_code}: "
-            f"{invalid_json_response.text}"
-        )
-        invalid_json_body = invalid_json_response.json()
-        assert isinstance(invalid_json_body, dict), "Expected a JSON error response"
-        assert isinstance(invalid_json_body.get("error"), str) and invalid_json_body["error"], (
-            f"Expected a non-empty validation error, got: {invalid_json_body}"
+    for invalid_request in invalid_requests:
+        description = invalid_request.pop("description")
+        try:
+            response = requests.post(
+                url,
+                headers=headers,
+                timeout=30,
+                **invalid_request,
+            )
+        except requests.RequestException as exc:
+            raise AssertionError(f"Request failed for {description}: {exc}") from exc
+
+        assert response.status_code == 400, (
+            f"Expected HTTP 400 for {description}, got {response.status_code}: "
+            f"{response.text}"
         )
 
-        missing_proposal_response = requests.post(
-            f"{BASE_URL}/evaluate",
-            json={},
-            timeout=30,
+        try:
+            body = response.json()
+        except ValueError as exc:
+            raise AssertionError(
+                f"Expected a JSON error response for {description}, got: {response.text}"
+            ) from exc
+
+        assert isinstance(body, dict), f"Expected a JSON object, got {body!r}"
+        assert isinstance(body.get("error"), str) and body["error"].strip(), (
+            f"Expected a non-empty validation error message for {description}, got {body!r}"
         )
-        assert missing_proposal_response.status_code == 400, (
-            f"Expected 400 when proposal is missing, got "
-            f"{missing_proposal_response.status_code}: {missing_proposal_response.text}"
-        )
-        missing_proposal_body = missing_proposal_response.json()
-        assert isinstance(missing_proposal_body, dict), "Expected a JSON error response"
-        assert isinstance(missing_proposal_body.get("error"), str) and missing_proposal_body["error"], (
-            f"Expected a non-empty validation error, got: {missing_proposal_body}"
-        )
-    except requests.RequestException as exc:
-        raise AssertionError(f"Request to the policy harness failed: {exc}") from exc
 
 
 if __name__ == "__main__":

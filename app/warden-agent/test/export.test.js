@@ -17,7 +17,8 @@ describe("ledger export", () => {
       { at: "2026-11-03T06:30:00Z", id: "b", issueKey: "PAY-3", kind: "transition", verdict: { decision: "deny", reasons: [{ code: "BLOCKED_LABEL" }, { code: "RUN_LIMIT" }] }, status: "refused" },
       { at: "2026-11-03T06:29:00Z", id: "a", issueKey: "PAY-1", kind: "transition", verdict: { decision: "allow", reasons: [] }, status: "executed" },
     ]).split("\r\n");
-    expect(csv).toHaveLength(3);
+    expect(csv).toHaveLength(4);
+    expect(csv[3]).toBe("");
     expect(csv[0].startsWith("decided_at,decision_id")).toBe(true);
     expect(csv[1]).toContain(",a,");
     expect(csv[2]).toContain("BLOCKED_LABEL RUN_LIMIT");
