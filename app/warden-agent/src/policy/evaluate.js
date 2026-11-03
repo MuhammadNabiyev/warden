@@ -9,8 +9,9 @@
  *   - "hold":  the write is inside the hard limits but a person must approve it first
  *   - "deny":  the write breaks a hard rule and never runs
  *
- * Every broken rule is reported (not only the first one), so the person reading a refusal sees the
- * whole picture. "deny" always wins over "hold": a hold never hides a refusal.
+ * Every hard rule that is broken is reported (not only the first one), so the person reading a
+ * refusal sees the whole picture. "deny" always wins over "hold": a refusal lists only hard rules,
+ * and hold reasons appear only when no hard rule is broken.
  */
 
 export const ACTION_KINDS = ["transition", "assign", "comment", "set_priority"];

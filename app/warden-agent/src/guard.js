@@ -9,7 +9,7 @@ import { defaultMandate } from "./policy/defaults.js";
 import { evaluate } from "./policy/evaluate.js";
 import * as jira from "./jira.js";
 import { linkedGoals, protectedMatch } from "./graph.js";
-import { appendLedger, getApproval, getMandate, newId, recentUsage, saveApproval, saveMandate, updateLedger } from "./store.js";
+import { appendLedger, claimApproval, getApproval, getMandate, newId, recentUsage, saveApproval, saveMandate, updateLedger } from "./store.js";
 
 /** Loads the mandate, creating the conservative default on first use. */
 export async function loadMandate() {
@@ -173,12 +173,9 @@ export async function approve(approvalId, approverId) {
     return close("refused", `The mandate now refuses this change (${recheck.reasons.map((r) => r.code).join(", ")}). Nothing was written.`, { verdict: recheck });
   }
 
-  // Claim the approval before writing, then read the claim back: if another approver claimed it in
-  // the meantime, their token wins and this click writes nothing.
-  const token = newId("claim");
-  await saveApproval({ ...approval, status: "approving", decidedBy: approverId, claim: token });
-  const claimed = await getApproval(approval.id);
-  if (claimed?.claim !== token) return { ok: false, message: "Another person is already deciding this request." };
+  // Only one decision can ever win, so two people approving at once cannot write twice.
+  if (!(await claimApproval(approval.id, approverId))) return { ok: false, message: "Another person is already deciding this request." };
+  await saveApproval({ ...approval, status: "approving", decidedBy: approverId });
   try {
     const result = await execute(approval.kind, approval.issueKey, approval.args);
     const decidedAt = new Date().toISOString();
@@ -194,6 +191,7 @@ export async function approve(approvalId, approverId) {
 export async function decline(approvalId, approverId) {
   const approval = await getApproval(approvalId);
   if (!approval || approval.status !== "pending") return { ok: false, message: "This request was already processed." };
+  if (!(await claimApproval(approval.id, approverId))) return { ok: false, message: "Another person is already deciding this request." };
   const decidedAt = new Date().toISOString();
   await saveApproval({ ...approval, status: "declined", decidedBy: approverId, decidedAt });
   await updateLedger({ id: approval.decisionId, at: approval.decisionAt, ...(await ledgerShell(approval)), status: "declined", approvedBy: approverId, approvedAt: decidedAt });

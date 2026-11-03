@@ -18,13 +18,17 @@ Warden reads Jira issues and users, and Atlassian Goals linked to issues through
 
 ## What Warden does not do
 
-- No data leaves Atlassian. The app declares no external egress.
+- Warden sends nothing to servers of its own or to third parties. The app declares no external egress.
 - No analytics, tracking or advertising.
-- No language model sees your data through Warden. Decisions are made by plain code.
+- Warden calls no language model. Its decisions are made by plain code.
+
+## Agents that use Warden
+
+The results of Warden's actions (issue details from a search, verdicts and reasons) go back to whoever asked: the Rovo agent, which is a language model run by Atlassian, or an MCP client you connect yourself. What those agents do with the results is governed by their own terms.
 
 ## Retention and deletion
 
-Data stays in your site's Forge storage until the app is uninstalled. Uninstalling Warden removes its storage, as Forge does for every app.
+Data stays in your site's Forge storage while the app is installed. When Warden is uninstalled, Atlassian soft-deletes the data and keeps it for its retention period, as it does for every Forge app; see Atlassian's [hosted storage data lifecycle](https://developer.atlassian.com/platform/forge/storage-reference/hosted-storage-data-lifecycle/). Warden keeps no copy anywhere else.
 
 ## Contact
 

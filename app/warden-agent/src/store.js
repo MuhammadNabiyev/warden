@@ -62,4 +62,19 @@ export async function recentUsage(now) {
 
 export const saveApproval = (approval) => kvs.set(`approval:${approval.id}`, approval);
 export const getApproval = (id) => kvs.get(`approval:${id}`);
+
+/**
+ * Takes the one-time right to decide a held change. KVS refuses the write if the key exists, so
+ * of two people deciding at the same moment exactly one wins. The claim expires after an hour, so
+ * a run that crashed mid-decision does not leave the request stuck forever.
+ */
+export async function claimApproval(id, by) {
+  try {
+    await kvs.set(`approval-claim:${id}`, { by, at: new Date().toISOString() }, { keyPolicy: "FAIL_IF_EXISTS", ttl: { value: 1, unit: "HOURS" } });
+    return true;
+  } catch (e) {
+    if (/exist/i.test(`${e.code || ""} ${e.message || ""}`)) return false;
+    throw e;
+  }
+}
 export const listApprovals = () => readAll("approval:", 200);

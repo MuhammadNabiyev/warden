@@ -32,7 +32,7 @@ An admin writes the **mandate** on the Warden page in Jira: which projects and a
 
 **Connected context through the Teamwork Graph.** Labels are not the whole story. Warden asks the Teamwork Graph which Atlassian Goals an issue is linked to. Work tied to a goal the mandate protects (in the demo, "Increase Global Revenue by 20%") waits for a person, even if the issue looks harmless. If the graph cannot be reached, Warden holds instead of guessing.
 
-**Approvals that re-check.** Held changes wait as a receipt: the exact change, why it was held, and the mandate version it was judged under. When a person approves, Warden re-reads the issue and re-judges it against the current mandate. If the issue changed meanwhile, or a rule now refuses it, nothing is written. A refusal always beats an approval. Two approvers cannot run the same change twice.
+**Approvals that re-check.** Held changes wait as a receipt: the exact change, why it was held, and the mandate version it was judged under. When a person approves, Warden re-reads the issue and re-judges it against the current mandate. If the issue changed meanwhile, or a rule now refuses it, nothing is written. A refusal always beats an approval. An atomic claim means two people approving at once cannot write twice.
 
 **A simulator** judges a bulk plan (any JQL) before anything runs. Limits are projected across the whole plan, so a 40-item run is stopped up front instead of failing halfway.
 
@@ -46,7 +46,7 @@ An admin writes the **mandate** on the Warden page in Jira: which projects and a
 - **Modules:** `rovo:agent` (Triage Steward), 6 `action` modules (search, explain mandate, transition, set priority, assign, comment), `rovo:mcp` exposing the same tools, and a `jira:globalPage` built with **UI Kit**.
 - **Teamwork Graph:** the `jiraWorkItemGoals` query (`read:graph:issue:jira`, `read:graph:goal:atlassian`), called as the user.
 - **Forge KVS** for the mandate, approvals and the ledger.
-- **The policy engine** (`src/policy/evaluate.js`) is a pure function: no I/O, no model. Facts come from Jira, never from what the agent claims about an issue. Every broken rule is reported, and deny always wins over hold.
+- **The policy engine** (`src/policy/evaluate.js`) is a pure function: no I/O, no model. Facts come from Jira, never from what the agent claims about an issue. Every hard rule that is broken is reported, and deny always wins over hold.
 - **Testing:** 16 Vitest unit and property-based tests (fast-check) on the engine, and a 12-test **TestSprite** suite run against a local HTTP harness that serves the exact engine code. TestSprite found two real bugs, both fixed.
 - **Design:** the Warden page was reviewed by OpenAI Codex as a second designer; its ranked findings (decision-receipt cards, request-verdict-outcome activity, honest empty states, stuck-button and stale-approval bugs) were applied.
 
@@ -54,7 +54,7 @@ An admin writes the **mandate** on the Warden page in Jira: which projects and a
 
 - **Rovo action context.** Inside a Rovo action, the site's `cloudId` arrives in the payload's context, not where we first read it. The result: every Teamwork Graph check failed. Warden's fail-closed rule did its job (the change was held with `CONTEXT_UNAVAILABLE` instead of slipping through), and we fixed the lookup.
 - **UI Kit text fields** dropped characters when typing fast because every keystroke round-trips through the bridge. Switching to uncontrolled fields fixed it.
-- **Approvals are a race.** A request can wait for hours while the issue, the rules or the limits change. Re-judging at approval time, and claiming the approval before writing, closed that gap.
+- **Approvals are a race.** A request can wait for hours while the issue, the rules or the limits change. Re-judging at approval time, and an atomic one-time claim before writing, closed that gap.
 
 ## Accomplishments that we're proud of
 
