@@ -8,6 +8,8 @@
 
 **Bonus prizes:** Best Agents (Rovo), Best app with Atlassian MCP, Best apps with Teamwork Graph integration
 
+**Installation link (Jira):** https://developer.atlassian.com/console/install/7ab17a2d-d941-4433-835a-8b84fa5e1041?signature=AYABeBDqD2TtkfWXejTW1qLNvf8AAAADAAdhd3Mta21zAEthcm46YXdzOmttczp1cy13ZXN0LTI6NzA5NTg3ODM1MjQzOmtleS83MDVlZDY3MC1mNTdjLTQxYjUtOWY5Yi1lM2YyZGNjMTQ2ZTcAuAECAQB4CxqLTo9l4lqXuFjNim1xJM%2Bp%2F3TVP9xHS2BrU5DRRucB1%2BJ2sKS%2FiGZjMTu24%2FfDPgAAAH4wfAYJKoZIhvcNAQcGoG8wbQIBADBoBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDAgRKouexwBl7hFEdAIBEIA71ZRwJmmI8Yj%2BkOwCEa74hIr%2BDM9JkRnFqGZA2h2908ktHUV%2FZFwddD6ZwM3qlb18xk9q%2FLyhQ5dF7fMAB2F3cy1rbXMAS2Fybjphd3M6a21zOmV1LXdlc3QtMTo3MDk1ODc4MzUyNDM6a2V5LzQ2MzBjZTZiLTAwYzMtNGRlMi04NzdiLTYyN2UyMDYwZTVjYwC4AQICAHi9bVMAkme4qVQX1fQHo6ePw3H40A7cGfz7yrmSfBWMXgGBHpzSSMl6ujKbhtb8iqTZAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMJvsXT6yOk58RqcamAgEQgDvmQkuu%2Fku92GPq0wM3Dn8jRRbLu4PNVi8OQa%2B69v6Th%2B%2F05ETRLhJ8orYISi%2FjwtodcEyZfMGjeCDT5AAHYXdzLWttcwBLYXJuOmF3czprbXM6dXMtZWFzdC0xOjcwOTU4NzgzNTI0MzprZXkvNmMxMjBiYTAtNGNkNS00OTg1LWI4MmUtNDBhMDQ5NTJjYzU3ALgBAgIAeDYASx0XCjkny4iLV6vz%2BKtEGSGT6kdt0QRpkn6D%2FlVEAQxZt0EA9AWKXRENiqodsK8AAAB%2BMHwGCSqGSIb3DQEHBqBvMG0CAQAwaAYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAyRjMS7rsSk4bNigwICARCAO21WTrB9mtgKtRe7mh7ajV84qGQ51TRJP7vs3JOsaak4tSFtXrAANGJKWAbpEmPa%2BXza2D9Zf%2BcgWmtsAgAAAAAMAAAQAAAAAAAAAAAAAAAAAJUijcRS8lyiduieQsgau9b%2F%2F%2F%2F%2FAAAAAQAAAAAAAAAAAAAAAQAAADJUDqyoYWWWWEJRkK2ZG02%2BSkE6SgjafMK83mDSwlY%2BYzbzmF6%2FTNwPfcWVJphS4XncgiJvpH%2FxbMPxiwDttvrMNnk%3D&product=jira
+
 **Video:** https://youtu.be/cR5fEOE5eIA
 
 **Code:** https://github.com/MuhammadNabiyev/warden
@@ -79,7 +81,7 @@ atlassian-forge, rovo, rovo-mcp, teamwork-graph, jira, ui-kit, forge-kvs, javasc
 
 ## Testing instructions for judges
 
-1. Install Warden with the installation link on a Jira Cloud site that has Rovo (Rovo is needed only for the agent; the Warden page and simulator work without it).
+1. Install Warden with the installation link above on a Jira Cloud site that has Rovo (Rovo is needed only for the agent; the Warden page and simulator work without it).
 2. Open **Apps → Warden**. In the setup card, enter an existing test project key and select **Create demo issues in Jira**. This adds 24 issues covering every verdict and adds the project to the mandate.
 3. Open **Ask Rovo**, choose the **Triage Steward** agent and try:
    - `Move <KEY>-1 to In Progress` → Cleared
