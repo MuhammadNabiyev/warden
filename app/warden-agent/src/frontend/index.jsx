@@ -201,7 +201,9 @@ function Activity({ ledger }) {
         key: `verdict:${e.id}`,
         content: (
           <Stack space="space.050">
-            <Verdict decision={e.verdict?.decision} />
+            <Inline>
+              <Verdict decision={e.verdict?.decision} />
+            </Inline>
             <Text size="small">{(e.verdict?.reasons || []).map((r) => r.message).join(" ") || (e.verdict?.decision === "allow" ? "Passed every mandate check." : "No policy reason recorded.")}</Text>
           </Stack>
         ),
