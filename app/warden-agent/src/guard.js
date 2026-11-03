@@ -144,15 +144,41 @@ export async function approve(approvalId, approverId) {
   const mandate = await loadMandate();
   if (mandate.status !== "active") return { ok: false, message: `The mandate is ${mandate.status}. Resume it before approving agent writes.` };
 
-  const now = await jira.issueFacts(approval.issueKey);
+  // Close a request that can no longer run, in both the approval queue and the ledger.
+  const close = async (status, message, extra = {}) => {
+    const decidedAt = new Date().toISOString();
+    await saveApproval({ ...approval, status, decidedBy: approverId, decidedAt, ...extra });
+    await updateLedger({ id: approval.decisionId, at: approval.decisionAt, ...(await ledgerShell(approval)), status, approvedBy: approverId, approvedAt: decidedAt, ...extra });
+    return { ok: false, message };
+  };
+
+  let now;
+  try {
+    now = await jira.issueFacts(approval.issueKey);
+  } catch (e) {
+    return close("failed", `Warden could not read ${approval.issueKey} again: ${e.message}. Nothing was written.`, { error: e.message });
+  }
   const stale = approval.before.status !== now.status || approval.before.priority !== now.priority || (approval.before.assignee?.accountId || null) !== (now.assignee?.accountId || null);
-  if (stale) {
-    await saveApproval({ ...approval, status: "stale", decidedBy: approverId, decidedAt: new Date().toISOString() });
-    return { ok: false, message: "This issue changed while the request was waiting. Nothing was written; ask the agent again." };
+  if (stale) return close("stale", "This issue changed while the request was waiting. Nothing was written; ask the agent again.");
+
+  // The rules may have changed while the request waited: a person can lift a Hold, never a Refusal.
+  const at = new Date();
+  const recheck = evaluate(
+    mandate,
+    { kind: approval.kind, issueKey: now.issueKey, projectKey: now.projectKey, issueType: now.issueType, labels: now.labels, priority: approval.args.priority, toStatus: approval.args.toStatus, runId: `${approverId}:approval:${approval.id}` },
+    await recentUsage(at),
+    at,
+  );
+  if (recheck.decision === "deny") {
+    return close("refused", `The mandate now refuses this change (${recheck.reasons.map((r) => r.code).join(", ")}). Nothing was written.`, { verdict: recheck });
   }
 
-  // Claim the approval before writing so a double click cannot run it twice.
-  await saveApproval({ ...approval, status: "approving", decidedBy: approverId });
+  // Claim the approval before writing, then read the claim back: if another approver claimed it in
+  // the meantime, their token wins and this click writes nothing.
+  const token = newId("claim");
+  await saveApproval({ ...approval, status: "approving", decidedBy: approverId, claim: token });
+  const claimed = await getApproval(approval.id);
+  if (claimed?.claim !== token) return { ok: false, message: "Another person is already deciding this request." };
   try {
     const result = await execute(approval.kind, approval.issueKey, approval.args);
     const decidedAt = new Date().toISOString();
@@ -160,7 +186,7 @@ export async function approve(approvalId, approverId) {
     await updateLedger({ id: approval.decisionId, at: approval.decisionAt, ...(await ledgerShell(approval)), status: "approved", approvedBy: approverId, approvedAt: decidedAt, result });
     return { ok: true, message: `${approval.change} on ${approval.issueKey}. Done, with your Jira permissions.` };
   } catch (e) {
-    await saveApproval({ ...approval, status: "failed", decidedBy: approverId, error: e.message });
+    await close("failed", "", { error: e.message });
     return { ok: false, message: `Jira refused the change: ${e.message}` };
   }
 }

@@ -3,3 +3,4 @@ node_modules
 .forge
 /graft/
 .claude/
+testsprite_tests/tmp/

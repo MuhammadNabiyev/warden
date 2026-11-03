@@ -1,0 +1,40 @@
+import requests
+
+
+BASE_URL = "http://localhost:4747"
+
+
+def test_evaluate_plan_invalid_proposals_type():
+    url = f"{BASE_URL}/evaluate-plan"
+    payload = {"proposals": "not-an-array"}
+
+    try:
+        response = requests.post(
+            url,
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=30,
+        )
+    except requests.RequestException as exc:
+        raise AssertionError(f"Request to {url} failed: {exc}") from exc
+
+    assert response.status_code == 400, (
+        f"Expected status 400, received {response.status_code}: {response.text}"
+    )
+
+    try:
+        body = response.json()
+    except ValueError as exc:
+        raise AssertionError(
+            f"Expected a JSON error response, received: {response.text}"
+        ) from exc
+
+    assert isinstance(body, dict), f"Expected a JSON object, received: {body!r}"
+    assert "error" in body, f"Expected an error message in the response: {body!r}"
+    assert isinstance(body["error"], str) and body["error"].strip(), (
+        f"Expected a non-empty error message, received: {body['error']!r}"
+    )
+
+
+if __name__ == "__main__":
+    test_evaluate_plan_invalid_proposals_type()

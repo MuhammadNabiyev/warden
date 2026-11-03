@@ -28,7 +28,6 @@ import ForgeReconciler, {
   Textfield,
   Label,
   HelperMessage,
-  Badge,
   xcss,
 } from "@forge/react";
 import { invoke } from "@forge/bridge";
@@ -47,7 +46,8 @@ const STATUS_TEXT = {
   approved: "Approved and executed",
   declined: "Declined, nothing written",
   refused: "No write",
-  failed: "Jira refused the change",
+  stale: "Issue changed, nothing written",
+  failed: "Request failed",
 };
 
 const cardStyle = xcss({
@@ -60,11 +60,17 @@ const cardStyle = xcss({
 });
 
 const receiptStyle = xcss({
-  borderColor: "color.border",
+  borderColor: "color.border.warning",
   borderStyle: "solid",
   borderWidth: "border.width",
   borderRadius: "border.radius.200",
-  padding: "space.200",
+  padding: "space.300",
+  backgroundColor: "elevation.surface",
+});
+
+const quoteStyle = xcss({
+  borderRadius: "border.radius.100",
+  padding: "space.150",
   backgroundColor: "elevation.surface.sunken",
 });
 
@@ -72,56 +78,86 @@ const Verdict = ({ decision }) => <Lozenge appearance={VERDICT[decision]?.appear
 
 const when = (iso) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
+/** Cleared / Hold / Refused with a count beside each. */
+const VerdictStrip = ({ counts }) => (
+  <Inline space="space.300" shouldWrap>
+    {["allow", "hold", "deny"].map((d) => (
+      <Inline key={d} space="space.100" alignBlock="center">
+        <Verdict decision={d} />
+        <Text weight="bold">{counts[d] || 0}</Text>
+      </Inline>
+    ))}
+  </Inline>
+);
+
+/** Reasons read as explanations; the rule code is secondary evidence. */
 const Reasons = ({ reasons }) =>
   (reasons || []).length === 0 ? (
-    <Text>Every rule passed.</Text>
+    <Text>No reason was recorded. Review this request before approving.</Text>
   ) : (
-    <Stack space="space.050">
+    <Stack space="space.100">
       {reasons.map((r) => (
-        <Text key={r.code + r.message}>
-          <Lozenge>{r.code.toLowerCase().replaceAll("_", "-")}</Lozenge> {r.message}
-        </Text>
+        <Stack key={r.code + r.message} space="space.025">
+          <Text>{r.message}</Text>
+          <Text size="small" color="color.text.subtle">
+            Rule: {r.code}
+          </Text>
+        </Stack>
       ))}
     </Stack>
   );
 
 // ---------- Approvals ----------
 
-function Approvals({ approvals, onDecide, busyId, notice }) {
+function Approvals({ approvals, onDecide, busyId }) {
   if (approvals.length === 0) {
     return (
       <EmptyState
-        header="No decisions waiting"
-        description="When the agent asks for a change that needs a person, it waits here with the exact change and the rule that held it."
+        header="No changes awaiting approval"
+        description="Only requests with a Hold verdict appear here. Check Activity for Cleared and Refused requests, or use Simulator to preview a run without changing Jira."
       />
     );
   }
   return (
     <Stack space="space.200">
-      {notice && <SectionMessage appearance={notice.ok ? "success" : "warning"}>{notice.message}</SectionMessage>}
       {approvals.map((a) => (
         <Box key={a.id} xcss={receiptStyle}>
-          <Stack space="space.150">
-            <Inline spread="space-between" alignBlock="center">
-              <Inline space="space.100" alignBlock="center">
+          <Stack space="space.200">
+            <Inline spread="space-between" alignBlock="center" shouldWrap>
+              <Inline space="space.100" alignBlock="center" shouldWrap>
                 <Heading size="small">{a.issueKey}</Heading>
                 <Verdict decision="hold" />
+                <Text size="small">Nothing written</Text>
               </Inline>
-              <Text>Requested {when(a.createdAt)}</Text>
+              <Text size="small" color="color.text.subtle">
+                Requested {when(a.createdAt)}
+              </Text>
             </Inline>
-            <Text>
-              <Text weight="bold">{a.change}</Text>
-            </Text>
-            <Reasons reasons={a.reasons} />
-            <Text>Approving runs this one change with your Jira permissions. Warden checks the issue again first.</Text>
+            {a.before?.summary && <Text>{a.before.summary}</Text>}
+            <Stack space="space.100">
+              <Heading size="medium">{a.kind === "comment" ? "Add this comment" : a.change}</Heading>
+              {a.kind === "comment" && (
+                <Box xcss={quoteStyle}>
+                  <Text>{String(a.args?.text ?? "")}</Text>
+                </Box>
+              )}
+            </Stack>
+            <Stack space="space.050">
+              <Text weight="bold">Why Warden held it</Text>
+              <Reasons reasons={a.reasons} />
+            </Stack>
+            <Text size="small">Approve to apply this single change with your Jira permissions. Warden first re-reads the issue and re-checks it against the current mandate; a rule that now refuses it still wins.</Text>
             <ButtonGroup>
-              <Button appearance="primary" isDisabled={busyId === a.id} onClick={() => onDecide("approve", a.id)}>
-                Approve this change
+              <Button appearance="primary" isDisabled={busyId !== null} onClick={() => onDecide("approve", a.id)}>
+                {busyId === a.id ? "Submitting decision…" : "Approve and apply"}
               </Button>
-              <Button appearance="subtle" isDisabled={busyId === a.id} onClick={() => onDecide("decline", a.id)}>
-                Decline
+              <Button appearance="default" isDisabled={busyId !== null} onClick={() => onDecide("decline", a.id)}>
+                Decline change
               </Button>
             </ButtonGroup>
+            <Text size="small" color="color.text.subtle">
+              Decision {a.decisionId} · evaluated under mandate v{a.mandateVersion}
+            </Text>
           </Stack>
         </Box>
       ))}
@@ -131,32 +167,65 @@ function Approvals({ approvals, onDecide, busyId, notice }) {
 
 // ---------- Activity ----------
 
+/** Request → verdict → outcome. The verdict stays the original policy decision even after a person acts. */
 function Activity({ ledger }) {
   if (ledger.length === 0) {
-    return <EmptyState header="Your first decision starts here" description="Ask the Triage Steward agent in Rovo to change an issue. Every request lands here with its verdict." />;
+    return (
+      <EmptyState
+        header="No requests recorded yet"
+        description="Add a project in Mandate, then ask Triage Steward in Rovo to propose a change there. Warden records its verdict and the outcome here."
+      />
+    );
   }
   const head = {
     cells: [
-      { key: "when", content: "When" },
-      { key: "issue", content: "Issue" },
-      { key: "change", content: "Requested change" },
-      { key: "verdict", content: "Verdict" },
-      { key: "result", content: "Result" },
-      { key: "rule", content: "Rule" },
+      { key: "request", content: "Requested change", width: 35 },
+      { key: "verdict", content: "Warden verdict", width: 35 },
+      { key: "result", content: "Outcome", width: 18 },
+      { key: "when", content: "Requested", width: 12 },
     ],
   };
   const rows = ledger.map((e) => ({
     key: e.id,
     cells: [
-      { key: "when", content: when(e.at) },
-      { key: "issue", content: e.issueKey },
-      { key: "change", content: e.change || "-" },
-      { key: "verdict", content: <Verdict decision={e.verdict?.decision} /> },
-      { key: "result", content: STATUS_TEXT[e.status] || e.status },
-      { key: "rule", content: (e.verdict?.reasons || []).map((r) => r.code.toLowerCase().replaceAll("_", "-")).join(", ") || "-" },
+      {
+        key: `request:${e.id}`,
+        content: (
+          <Stack space="space.050">
+            <Text weight="bold">{e.issueKey}</Text>
+            <Text>{e.change || "Request could not be prepared"}</Text>
+          </Stack>
+        ),
+      },
+      {
+        key: `verdict:${e.id}`,
+        content: (
+          <Stack space="space.050">
+            <Verdict decision={e.verdict?.decision} />
+            <Text size="small">{(e.verdict?.reasons || []).map((r) => r.message).join(" ") || (e.verdict?.decision === "allow" ? "Passed every mandate check." : "No policy reason recorded.")}</Text>
+          </Stack>
+        ),
+      },
+      {
+        key: `result:${e.id}`,
+        content: (
+          <Stack space="space.050">
+            <Text>{STATUS_TEXT[e.status] || e.status}</Text>
+            {e.error && <Text size="small">{e.error}</Text>}
+          </Stack>
+        ),
+      },
+      { key: `when:${e.id}`, content: when(e.at) },
     ],
   }));
-  return <DynamicTable head={head} rows={rows} rowsPerPage={15} />;
+  return (
+    <Stack space="space.100">
+      <Text size="small" color="color.text.subtle">
+        Latest {ledger.length} requests. Verdicts show the original policy decision; outcomes show what happened afterwards.
+      </Text>
+      <DynamicTable caption="Decision activity" head={head} rows={rows} rowsPerPage={10} />
+    </Stack>
+  );
 }
 
 // ---------- Mandate ----------
@@ -174,15 +243,25 @@ function MandateEditor({ mandate, usage, onSaved, onStatus }) {
   const [draft, setDraft] = useState({ ...mandate, projects: asList(mandate.projects), blockedLabels: asList(mandate.blockedLabels), holdLabels: asList(mandate.holdLabels), protectedTypes: asList(mandate.protectedTypes), holdPriorities: asList(mandate.holdPriorities), holdStatuses: asList(mandate.holdStatuses || []), protectedGoals: asList(mandate.protectedGoals || []) });
   const [graphKey, setGraphKey] = useState("PAY-1");
   const [graphResult, setGraphResult] = useState(null);
-  const checkGraph = async () => setGraphResult(await invoke("checkGraph", { issueKey: graphKey }));
+  const checkGraph = async () => {
+    try {
+      setGraphResult(await invoke("checkGraph", { issueKey: graphKey }));
+    } catch (e) {
+      setGraphResult({ ok: false, message: e.message || "The check failed." });
+    }
+  };
   const [message, setMessage] = useState(null);
   const set = (field) => (e) => setDraft({ ...draft, [field]: e.target.value });
   const setLimit = (field) => (e) => setDraft({ ...draft, limits: { ...draft.limits, [field]: e.target.value } });
 
   const save = async () => {
-    const res = await invoke("saveMandate", { mandate: { ...draft, limits: { perHour: Number(draft.limits.perHour), perDay: Number(draft.limits.perDay), perRun: Number(draft.limits.perRun) }, holdAboveRun: Number(draft.holdAboveRun) } });
-    setMessage(res.ok ? { ok: true, message: `Saved. Mandate is now v${res.mandate.version}.` } : res);
-    if (res.ok) onSaved();
+    try {
+      const res = await invoke("saveMandate", { mandate: { ...draft, limits: { perHour: Number(draft.limits.perHour), perDay: Number(draft.limits.perDay), perRun: Number(draft.limits.perRun) }, holdAboveRun: Number(draft.holdAboveRun) } });
+      setMessage(res.ok ? { ok: true, message: `Saved. Mandate is now v${res.mandate.version}.` } : res);
+      if (res.ok) onSaved();
+    } catch (e) {
+      setMessage({ ok: false, message: e.message || "The mandate could not be saved." });
+    }
   };
 
   const dayShare = mandate.limits.perDay ? usage.day / mandate.limits.perDay : 0;
@@ -196,7 +275,9 @@ function MandateEditor({ mandate, usage, onSaved, onStatus }) {
             <Inline space="space.100" alignBlock="center">
               <Heading size="medium">{mandate.name}</Heading>
               <Lozenge appearance={mandate.status === "active" ? "success" : mandate.status === "paused" ? "moved" : "removed"}>{mandate.status}</Lozenge>
-              <Badge>v{mandate.version}</Badge>
+              <Text size="small" color="color.text.subtle">
+                Version {mandate.version}
+              </Text>
             </Inline>
             <ButtonGroup>
               {mandate.status === "active" && <Button onClick={() => onStatus("paused")}>Pause agent writes</Button>}
@@ -212,11 +293,12 @@ function MandateEditor({ mandate, usage, onSaved, onStatus }) {
           <Text>
             {usage.hour} of {mandate.limits.perHour} writes used in the last hour
           </Text>
-          <ProgressBar value={Math.min(1, hourShare)} appearance={hourShare >= 0.8 ? "warning" : "default"} ariaLabel="Hourly usage" />
+          <ProgressBar value={Math.min(1, hourShare)} ariaLabel="Hourly usage" />
           <Text>
             {usage.day} of {mandate.limits.perDay} writes used in the last 24 hours
           </Text>
-          <ProgressBar value={Math.min(1, dayShare)} appearance={dayShare >= 0.8 ? "warning" : "default"} ariaLabel="Daily usage" />
+          <ProgressBar value={Math.min(1, dayShare)} ariaLabel="Daily usage" />
+          {Math.max(hourShare, dayShare) >= 0.8 && <Text size="small">Close to the limit. Further agent writes will be refused until the window rolls over.</Text>}
         </Stack>
       </Box>
 
@@ -254,7 +336,7 @@ function MandateEditor({ mandate, usage, onSaved, onStatus }) {
           <Label labelFor="holdLabels">Sensitive labels</Label>
           <Textfield id="holdLabels" value={draft.holdLabels} onChange={set("holdLabels")} />
         </Box>
-        <Inline space="space.200">
+        <Inline space="space.200" shouldWrap>
           <Box>
             <Label labelFor="holdPriorities">Sensitive priorities</Label>
             <Textfield id="holdPriorities" value={draft.holdPriorities} onChange={set("holdPriorities")} />
@@ -283,7 +365,7 @@ function MandateEditor({ mandate, usage, onSaved, onStatus }) {
         </Inline>
         {graphResult && <SectionMessage appearance={graphResult.ok ? "information" : "warning"}>{graphResult.message}</SectionMessage>}
         <Heading size="small">Limits</Heading>
-        <Inline space="space.200">
+        <Inline space="space.200" shouldWrap>
           <Box>
             <Label labelFor="perRun">Per run</Label>
             <Textfield id="perRun" type="number" value={String(draft.limits.perRun)} onChange={setLimit("perRun")} />
@@ -351,25 +433,16 @@ function Simulator() {
       {error && <SectionMessage appearance="error">{error}</SectionMessage>}
       {result && (
         <Stack space="space.150">
-          <Inline space="space.200">
-            <Text>
-              <Verdict decision="allow" /> {result.summary.allow}
-            </Text>
-            <Text>
-              <Verdict decision="hold" /> {result.summary.hold}
-            </Text>
-            <Text>
-              <Verdict decision="deny" /> {result.summary.deny}
-            </Text>
-          </Inline>
+          <VerdictStrip counts={result.summary} />
           <DynamicTable
-            head={{ cells: [{ key: "i", content: "Issue" }, { key: "v", content: "Verdict" }, { key: "r", content: "Why" }] }}
+            caption="Simulated verdicts"
+            head={{ cells: [{ key: "i", content: "Issue", width: 15 }, { key: "v", content: "Verdict", width: 15 }, { key: "r", content: "Why", width: 70 }] }}
             rows={result.rows.map((r) => ({
               key: r.issueKey,
               cells: [
-                { key: "i", content: r.issueKey },
-                { key: "v", content: <Verdict decision={r.decision} /> },
-                { key: "r", content: r.reasons.map((x) => x.message).join(" ") || "Every rule passed." },
+                { key: `i:${r.issueKey}`, content: r.issueKey },
+                { key: `v:${r.issueKey}`, content: <Verdict decision={r.decision} /> },
+                { key: `r:${r.issueKey}`, content: r.reasons.map((x) => x.message).join(" ") || "Passed every mandate check." },
               ],
             }))}
             rowsPerPage={20}
@@ -388,23 +461,29 @@ function SetupCard({ onDone }) {
   const [result, setResult] = useState(null);
   const run = async () => {
     setBusy(true);
-    const res = await invoke("seedDemo", { projectKey });
-    setResult(res);
-    setBusy(false);
-    if (res.ok) onDone();
+    try {
+      const res = await invoke("seedDemo", { projectKey });
+      setResult(res);
+      if (res.ok) onDone();
+    } catch (e) {
+      setResult({ ok: false, message: e.message || "The demo issues could not be created." });
+    } finally {
+      setBusy(false);
+    }
   };
   return (
     <Box xcss={cardStyle}>
       <Stack space="space.150">
-        <Heading size="small">Give Triage Steward its first project</Heading>
-        <Text>Warden writes nothing until a project is in the mandate. Load 24 demo issues into an existing project to see every verdict: issues that clear, issues that wait for you, and issues an agent may never touch.</Text>
+        <Heading size="small">Choose where agent writes are allowed</Heading>
+        <Text>No projects are allowed yet, so Warden refuses every agent write. Open Mandate to allow a project and work with its existing issues.</Text>
+        <Text>For a guided demo, pick an existing test project below. This creates 24 real Jira issues that show every verdict: changes that clear, changes that wait for you, and issues an agent may never touch.</Text>
         <Inline space="space.150" alignBlock="end">
           <Box>
             <Label labelFor="seed-key">Project key</Label>
             <Textfield id="seed-key" value={projectKey} onChange={(e) => setProjectKey(e.target.value)} />
           </Box>
           <Button appearance="primary" onClick={run} isDisabled={busy}>
-            {busy ? "Creating issues…" : "Load demo issues"}
+            {busy ? "Creating demo issues…" : "Create demo issues in Jira"}
           </Button>
         </Inline>
         {result && <SectionMessage appearance={result.ok ? "success" : "error"}>{result.message}</SectionMessage>}
@@ -420,11 +499,20 @@ function App() {
   const [error, setError] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [notice, setNotice] = useState(null);
+  const [loadedAt, setLoadedAt] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const load = () =>
-    invoke("getState")
-      .then(setState)
-      .catch((e) => setError(e.message || "Warden could not load."));
+  const load = async () => {
+    setRefreshing(true);
+    try {
+      setState(await invoke("getState"));
+      setLoadedAt(new Date().toISOString());
+    } catch (e) {
+      setError(e.message || "Warden could not load.");
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     load();
@@ -432,35 +520,61 @@ function App() {
 
   const decide = async (action, id) => {
     setBusyId(id);
-    const res = await invoke(action, { id });
-    setNotice(res);
-    setBusyId(null);
-    load();
+    try {
+      setNotice(await invoke(action, { id }));
+    } catch (e) {
+      setNotice({ ok: false, message: e.message || "The decision could not be recorded." });
+    } finally {
+      setBusyId(null);
+      load();
+    }
   };
 
   const setStatus = async (status) => {
-    await invoke("setStatus", { status });
+    try {
+      await invoke("setStatus", { status });
+    } catch (e) {
+      setNotice({ ok: false, message: e.message || "The mandate status could not be changed." });
+    }
     load();
   };
 
   if (error) return <SectionMessage appearance="error">{error}</SectionMessage>;
   if (!state) return <Spinner label="Loading Warden" />;
 
+  const pending = state.approvals.length;
+  const verdictCounts = Object.fromEntries(["allow", "hold", "deny"].map((d) => [d, state.ledger.filter((e) => e.verdict?.decision === d).length]));
+
   return (
     <Stack space="space.300">
-      <Text>Your Rovo agent proposes. Your mandate decides. Every Jira write by the Triage Steward passes here first.</Text>
+      <Stack space="space.100">
+        <Inline spread="space-between" alignBlock="center" shouldWrap>
+          <Heading size="large">Agent write control</Heading>
+          <Inline space="space.150" alignBlock="center">
+            <Text size="small" color="color.text.subtle">
+              Mandate v{state.mandate.version} · {state.mandate.status} · expires {when(state.mandate.expiresAt)}
+              {loadedAt ? ` · updated ${when(loadedAt)}` : ""}
+            </Text>
+            <Button appearance="subtle" onClick={load} isDisabled={refreshing}>
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </Button>
+          </Inline>
+        </Inline>
+        <Text>Triage Steward proposes Jira changes. Warden checks each one against your rules before anything is written.</Text>
+        <Heading size="medium">{pending === 0 ? "No changes awaiting your decision" : `${pending} ${pending === 1 ? "change needs" : "changes need"} your decision`}</Heading>
+      </Stack>
       {state.mandate.projects.length === 0 && <SetupCard onDone={load} />}
-      <Inline space="space.200">
-        <Text>
-          <Verdict decision="allow" /> {state.counts.cleared} cleared
+      <Stack space="space.050">
+        <Text size="small" color="color.text.subtle">
+          Verdicts across the latest {state.ledger.length} recorded requests
         </Text>
-        <Text>
-          <Verdict decision="hold" /> {state.counts.held} held
-        </Text>
-        <Text>
-          <Verdict decision="deny" /> {state.counts.refused} refused
-        </Text>
-      </Inline>
+        <VerdictStrip counts={verdictCounts} />
+      </Stack>
+      {notice && (
+        <SectionMessage appearance={notice.ok ? "success" : "warning"} title={notice.ok ? "Decision recorded" : "Decision needs attention"}>
+          <Text>{notice.message}</Text>
+        </SectionMessage>
+      )}
       <Tabs id="warden-tabs">
         <TabList>
           <Tab>Approvals {state.approvals.length > 0 ? `(${state.approvals.length})` : ""}</Tab>
@@ -470,7 +584,7 @@ function App() {
         </TabList>
         <TabPanel>
           <Box xcss={xcss({ paddingTop: "space.200", width: "100%" })}>
-            <Approvals approvals={state.approvals} onDecide={decide} busyId={busyId} notice={notice} />
+            <Approvals approvals={state.approvals} onDecide={decide} busyId={busyId} />
           </Box>
         </TabPanel>
         <TabPanel>

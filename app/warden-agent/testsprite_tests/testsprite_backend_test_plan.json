@@ -1,0 +1,52 @@
+[
+  {
+    "id": "TC001",
+    "title": "evaluate_single_write_policy_decision",
+    "description": "Test POST /evaluate endpoint with a valid proposal, mandate, usage array, and now timestamp to verify it returns a 200 response with a decision of allow, hold, or deny and the correct reasons array."
+  },
+  {
+    "id": "TC002",
+    "title": "evaluate_single_write_blocked_label_or_revoked_mandate",
+    "description": "Test POST /evaluate endpoint with a proposal targeting a blocked label or a revoked mandate to verify it returns a 200 response with a deny decision and appropriate reason codes such as BLOCKED_LABEL or MANDATE_REVOKED."
+  },
+  {
+    "id": "TC003",
+    "title": "evaluate_single_write_invalid_request_body",
+    "description": "Test POST /evaluate endpoint with invalid JSON body or missing required proposal field to verify it returns a 400 response with an error message indicating validation failure."
+  },
+  {
+    "id": "TC004",
+    "title": "evaluate_plan_bulk_simulation_success",
+    "description": "Test POST /evaluate-plan endpoint with an ordered array of valid proposals and optional usage to verify it returns a 200 response with per-item results and summary counts reflecting correct allow, hold, and deny decisions."
+  },
+  {
+    "id": "TC005",
+    "title": "evaluate_plan_exceed_limits_mid_sequence",
+    "description": "Test POST /evaluate-plan endpoint with multiple proposals that exceed burst or hourly limits partway through the sequence to verify it returns a 200 response where later items are denied and earlier eligible items are allowed or held, ensuring refused items do not consume budget."
+  },
+  {
+    "id": "TC006",
+    "title": "evaluate_plan_invalid_proposals_type",
+    "description": "Test POST /evaluate-plan endpoint with proposals set to a non-array value to verify it returns a 400 response with an error message indicating invalid input."
+  },
+  {
+    "id": "TC007",
+    "title": "mandate_default_retrieval",
+    "description": "Test GET /mandate/default endpoint to verify it returns a 200 response with the default mandate including default projects, blocked labels, limits, hold rules, status, and expiry for pre-filling the admin configuration screen."
+  },
+  {
+    "id": "TC008",
+    "title": "mandate_sanitize_valid_input",
+    "description": "Test POST /mandate/sanitize endpoint with valid admin input and an optional previous mandate to verify it returns a 200 response with a normalized mandate and incremented version suitable for saving and later policy evaluation."
+  },
+  {
+    "id": "TC009",
+    "title": "mandate_sanitize_invalid_expires_or_limits",
+    "description": "Test POST /mandate/sanitize endpoint with invalid expiresAt value or perHour limit greater than perDay to verify it returns a 400 response with an error message and rejects the form submission, keeping the previous mandate unchanged."
+  },
+  {
+    "id": "TC010",
+    "title": "health_endpoint_liveness_check",
+    "description": "Test GET /health endpoint to verify it returns a 200 response with { ok: true } indicating the local policy harness is running and ready for policy requests."
+  }
+]
